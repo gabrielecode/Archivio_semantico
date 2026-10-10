@@ -1,11 +1,37 @@
-<div align="center">
+# TCM Semantic Search
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+## Cos'è
+Strumento di ricerca semantica per dati TCM (Medicina Tradizionale Cinese).
+Permette di organizzare e ricercare contenuti tramite embedding.
 
-  <h1>Built with AI Studio</h2>
+## Avvio
+1. `npm install`
+2. Configurare `.env.local` con:
+   - `GEMINI_API_KEY=...`
+   - `ADMIN_TOKEN=...`
+3. `npm run dev`
+4. Produzione: `npm run build` seguito da `npm run start`
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Come si usa
+1. **Struttura**: Definire tipi e campi nel pannello apposito.
+2. **Dati**: Creare nuove voci o importarle.
+3. **Genera embedding**: Premere l'icona chiave e inserire l'ADMIN_TOKEN.
+4. **Ricerca**: Utilizzare la barra di ricerca semantica.
+5. **Salva JSON**: Esportare i dati.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Formato archivio
+Versione 2, modello `gemini-embedding-2-preview`, dimensione 768.
+Records contengono chunk. Il cambio modello richiede rigenerazione.
 
-</div>
+## Import/Export Excel
+Colonne: Titolo, Tipo, Contenuto, Tags, Fonte + campi dinamici.
+
+## Sicurezza
+- `ADMIN_TOKEN` obbligatorio per indicizzazione.
+- Rate limit sulle ricerche.
+- Chiave API salvata solo sul server.
+- Token admin solo in memoria.
+
+## Limiti
+- In anteprima, salvataggio via download.
+- Strumento di consultazione, non sostituisce parere medico.

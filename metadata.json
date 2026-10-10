@@ -1,0 +1,6 @@
+{
+  "name": "Ricerca semantica MTC",
+  "description": "Applicazione di ricerca semantica per la Medicina Tradizionale Cinese.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
