@@ -1,9 +1,8 @@
-export async function fetchEmbeddings(texts: string[], mode: 'document' | 'query', adminToken?: string, signal?: AbortSignal): Promise<number[][]> {
+export async function fetchEmbeddings(texts: string[], mode: 'document' | 'query', signal?: AbortSignal): Promise<number[][]> {
   const response = await fetch('/api/embed', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      ...(adminToken ? {'x-admin-token': adminToken} : {})
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({texts, mode}),
     signal

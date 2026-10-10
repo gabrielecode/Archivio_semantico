@@ -32,7 +32,7 @@ export const Field = ({label, hint, children}: {label: string, hint?: string, ch
     </label>
 );
 
-export const Modal = ({title, children, onClose, footer, hideClose}: any) => {
+export const Modal = ({title, children, onClose, footer, hideClose, className = 'max-w-lg'}: any) => {
     const modalRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const prev = document.activeElement as HTMLElement;
@@ -56,7 +56,7 @@ export const Modal = ({title, children, onClose, footer, hideClose}: any) => {
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div ref={modalRef} className="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div ref={modalRef} className={`bg-white p-6 rounded-xl shadow-xl w-full ${className}`} onClick={e => e.stopPropagation()}>
                 <h2 id="modal-title" className="text-xl font-serif mb-4">{title}</h2>
                 {children}
                 {(footer || !hideClose) && (

@@ -57,7 +57,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
             if (queryCache.current?.q === q) {
                 vec = queryCache.current.vec;
             } else {
-                const vecs = await fetchEmbeddings([q.trim()], 'query', undefined, abortController.current.signal);
+                const vecs = await fetchEmbeddings([q.trim()], 'query', abortController.current.signal);
                 vec = vecs[0];
                 queryCache.current = {q, vec};
             }

@@ -5,8 +5,8 @@ import {needsEmbedding, embedRecords} from '../utils/embed';
 import {calculateEmbHash} from '../utils/chunk';
 import {Loader2, AlertCircle} from 'lucide-react';
 
-export function EmbedBar({archive, adminToken, onNeedToken, onApply, toast}: {
-    archive: Archive, adminToken: string, onNeedToken: () => void, onApply: (results: any) => void, toast: (msg: string, type: 'success' | 'error') => void
+export function EmbedBar({archive, user, onNeedLogin, onApply, toast}: {
+    archive: Archive, user: {id: string, name: string} | null, onNeedLogin: () => void, onApply: (results: any) => void, toast: (msg: string, type: 'success' | 'error') => void
 }) {
     const pending = useMemo(() => archive.records.filter(needsEmbedding).length, [archive.records]);
     const [running, setRunning] = useState(false);
@@ -19,8 +19,8 @@ export function EmbedBar({archive, adminToken, onNeedToken, onApply, toast}: {
     }, []);
 
     const runEmbed = async (force: boolean) => {
-        if (!adminToken) {
-            onNeedToken();
+        if (!user) {
+            onNeedLogin();
             return;
         }
 
@@ -29,7 +29,7 @@ export function EmbedBar({archive, adminToken, onNeedToken, onApply, toast}: {
         setTotal(0);
         abortController.current = new AbortController();
 
-        const {results, errore} = await embedRecords(archive.records, adminToken, (d, t) => {
+        const {results, errore} = await embedRecords(archive.records, (d, t) => {
             setProgress(d);
             setTotal(t);
         }, abortController.current.signal, force);

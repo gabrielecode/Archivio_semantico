@@ -26,7 +26,7 @@ export function newArchive(nome: string): Archive {
 }
 
 export function parseArchive(json: any): Archive {
-    if (typeof json !== 'object' || json === null) throw new Error('Invalid archive');
+    if (typeof json !== 'object' || json === null) throw new Error('File JSON non valido');
     
     const base = newArchive('Imported');
     const records = Array.isArray(json) ? json.map(r => normalizeRecord(r)) : (json.records || []).map((r: any) => normalizeRecord(r));
@@ -85,64 +85,33 @@ function normalizeRecord(r: any): Rec {
     };
 }
 
-export async function openArchive(): Promise<{archive: Archive, handle: any} | null> {
-    if ('showOpenFilePicker' in window) {
-        try {
-            const [handle] = await (window as any).showOpenFilePicker({types: [{accept: {'application/json': ['.json']}}]});
-            const file = await handle.getFile();
-            return {archive: parseArchive(JSON.parse(await file.text())), handle};
-        } catch (e: any) {
-            if (e.name === 'AbortError') return null;
-        }
-    }
-    
-    return await new Promise((resolve, reject) => {
+export function exportArchiveJson(archive: Archive) {
+    const data = JSON.stringify(archive);
+    const blob = new Blob([data], {type: 'application/json'});
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = `${archive.nome.replace(/[\\/:*?"<>|]/g, '_')}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function pickJsonFile(): Promise<Archive | null> {
+    return new Promise((resolve, reject) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
         input.onchange = async () => {
+            const file = input.files?.[0];
+            if (!file) return resolve(null);
             try {
-                const file = input.files?.[0];
-                if (!file) return resolve(null);
-                resolve({archive: parseArchive(JSON.parse(await file.text())), handle: null});
+                resolve(parseArchive(JSON.parse(await file.text())));
             } catch (e) {
-                reject(e);
+                reject(new Error('File JSON non valido'));
             }
         };
         input.click();
     });
-}
-
-export async function saveArchive(archive: Archive, handleRef: {current: any}, saveAs = false): Promise<{handle: any, success: boolean, errore?: string}> {
-    const data = JSON.stringify(archive);
-    try {
-        let h = handleRef.current;
-        if (saveAs || !h) {
-            h = await (window as any).showSaveFilePicker({
-                suggestedName: `${archive.nome}.json`,
-                types: [{accept: {'application/json': ['.json']}}]
-            });
-        }
-        const writable = await h.createWritable();
-        await writable.write(data);
-        await writable.close();
-        return {handle: h, success: true};
-    } catch (e: any) {
-        if (e.name === 'AbortError') return {handle: handleRef.current, success: false, errore: 'Annullato'};
-        
-        try {
-            const blob = new Blob([data], {type: 'application/json'});
-            const a = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            a.href = url;
-            a.download = `${archive.nome}.json`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            return {handle: null, success: true};
-        } catch (err: any) {
-            return {handle: handleRef.current, success: false, errore: err.message};
-        }
-    }
 }
 
 export function exportExcel(archive: Archive) {

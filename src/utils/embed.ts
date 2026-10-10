@@ -8,7 +8,6 @@ export function needsEmbedding(rec: Rec): boolean {
 
 export async function embedRecords(
     recs: Rec[],
-    token: string,
     onProgress: (doneRecs: number, totalRecs: number) => void,
     signal: AbortSignal,
     force: boolean = false
@@ -38,7 +37,7 @@ export async function embedRecords(
             if (signal.aborted) throw new Error('Annullato');
             
             const batch = queue.slice(i, i + 20);
-            const batchVectors = await fetchEmbeddings(batch.map(b => b.chunk.testo), 'document', token, signal);
+            const batchVectors = await fetchEmbeddings(batch.map(b => b.chunk.testo), 'document', signal);
             
             // Assign back
             for (let j = 0; j < batch.length; j++) {

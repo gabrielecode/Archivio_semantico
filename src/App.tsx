@@ -1,119 +1,109 @@
 import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
-import {newArchive, openArchive, saveArchive} from './utils/archive';
+import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, Key, Save, FolderOpen, FilePlus, Menu} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
 import {EmbedBar} from './components/EmbedBar';
-import {ImportPanel} from './components/ImportPanel';
+import {ArchivePicker} from './components/ArchivePicker';
+import GuideContent from './components/GuideContent';
 import {calculateEmbHash} from './utils/chunk';
+import {openStore, Store, subscribe} from './utils/store';
 
-export default function App() {
+export default function App({user, onLogout}: {user: {id: string, name: string}, onLogout: () => void}) {
     const [tab, setTab] = useState<'ricerca' | 'dati' | 'struttura'>('ricerca');
-    const [archive, setArchive] = useState<Archive>(newArchive('Nuovo Archivio'));
+    const [archive, setArchive] = useState<Archive | null>(null);
+    const [archiveId, setArchiveId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [saveError, setSaveError] = useState('');
     const [dirty, setDirty] = useState(false);
-    const [adminToken, setAdminToken] = useState('');
-    const [showAdminModal, setShowAdminModal] = useState(false);
-    const [showImportModal, setShowImportModal] = useState(false);
+    const [conflict, setConflict] = useState(false);
+    const [showArchivePicker, setShowArchivePicker] = useState(false);
+    const [showGuideModal, setShowGuideModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => { document.title = `${dirty?'* ':''}${archive.nome} - Ricerca semantica MTC`; }, [archive.nome, dirty]);
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false); };
-        const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowMenu(false); };
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleEsc);
-        return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('keydown', handleEsc); };
-    }, []);
-
-    const [newArchiveModal, setNewArchiveModal] = useState(false);
-    const [confirmDialog, setConfirmDialog] = useState<any>(null);
-    const [newArchiveName, setNewArchiveName] = useState('Nuovo archivio');
-    const fileHandle = useRef<any>(null);
+    const storeRef = useRef<Store | null>(null);
+    const archiveRef = useRef<Archive | null>(null);
+    const timerRef = useRef<number | null>(null);
     const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<any>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const saveHandlers = useRef({ handleSave: (saveAs: boolean) => {} });
-    saveHandlers.current.handleSave = async (saveAs: boolean) => {
-        try {
-            const {handle, success, errore} = await saveArchive(archive, fileHandle, saveAs);
-            if (success) {
-                fileHandle.current = handle;
-                setDirty(false);
-                setToast({message: handle === null ? 'File scaricato nella cartella Download' : 'Archivio salvato', type: 'success'});
-            } else if (errore && errore !== 'Annullato') {
-                setToast({message: errore, type: 'error'});
-            }
-        } catch (e: any) {
-            setToast({message: e.message || 'Errore salvataggio', type: 'error'});
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            try {
+                const store = await openStore(user.id);
+                storeRef.current = store;
+                const id = await store.getLast();
+                let lastId = id;
+                if (!lastId) {
+                    const list = await store.list();
+                    if (list.length > 0) lastId = list[0].id;
+                    else {
+                        const a = newArchive('Il mio archivio');
+                        lastId = crypto.randomUUID();
+                        await store.put(lastId, a);
+                        await store.setLast(lastId);
+                    }
+                }
+                const a = await store.get(lastId!);
+                if (a) { setArchive(a); setArchiveId(lastId); archiveRef.current = a; }
+                setLoading(false);
+            } catch (e: any) { setSaveError(e.message); setLoading(false); }
+        })();
+        const unsub = subscribe(user.id, (msg) => { if (msg.id === archiveId) setConflict(true); });
+        return () => unsub();
+    }, [user?.id, archiveId]);
+
+    useEffect(() => {
+        archiveRef.current = archive;
+        if (dirty && !conflict) {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            timerRef.current = setTimeout(flush, 1200) as any;
         }
+    }, [archive, dirty, conflict]);
+
+    const flush = async () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (!dirty || !storeRef.current || !archiveId || conflict) return;
+        setSaveState('saving');
+        try {
+            await storeRef.current.put(archiveId, archiveRef.current!);
+            setDirty(false);
+            setSaveState('saved');
+        } catch (e: any) { setSaveState('error'); setSaveError(e.message); }
     };
+
+    useEffect(() => {
+        const handleVisibility = () => { if (document.hidden) flush(); };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, []);
 
     const updateArchive = useCallback((fn: (a: Archive) => Archive) => {
         setArchive(prev => {
+            if (!prev) return null;
             const next = fn(prev);
             return {...next, modificato: new Date().toISOString()};
         });
         setDirty(true);
     }, []);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                saveHandlers.current.handleSave(e.shiftKey);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [dirty]);
-
-    const handleNuovo = () => {
-        if (dirty) {
-            setConfirmDialog({
-                title: 'Scartare le modifiche?',
-                message: 'Hai delle modifiche non salvate. Vuoi proseguire?',
-                onConfirm: () => { setConfirmDialog(null); setNewArchiveModal(true); },
-                onCancel: () => setConfirmDialog(null)
-            });
-        } else {
-            setNewArchiveModal(true);
-        }
-    };
-
-    const handleApri = async () => {
-        const proceed = async () => {
-            try {
-                const result = await openArchive();
-                if (result) {
-                    setArchive(result.archive);
-                    fileHandle.current = result.handle;
-                    setDirty(false);
-                    setToast({message: 'Archivio aperto', type: 'success'});
-                }
-            } catch (e: any) {
-                setToast({message: e.message || 'Errore apertura', type: 'error'});
-            }
-        };
-        if (dirty) {
-            setConfirmDialog({
-                title: 'Scartare le modifiche?',
-                message: 'Hai delle modifiche non salvate. Vuoi proseguire?',
-                onConfirm: () => { setConfirmDialog(null); proceed(); },
-                onCancel: () => setConfirmDialog(null)
-            });
-        } else {
-            await proceed();
-        }
+    const handleLogout = () => {
+        setConfirmDialog({
+            title: 'Logout',
+            message: 'Vuoi uscire? Le modifiche salvate in locale rimarranno sul dispositivo.',
+            onConfirm: async () => {
+                await flush();
+                onLogout();
+                setConfirmDialog(null);
+            },
+            onCancel: () => setConfirmDialog(null)
+        });
     };
 
     const navItems = [ {id: 'ricerca', icon: Search, label: 'Ricerca'}, {id: 'dati', icon: Database, label: 'Dati'}, {id: 'struttura', icon: Settings2, label: 'Struttura'}];
@@ -122,9 +112,11 @@ export default function App() {
         else if (e.key === 'ArrowLeft') setTab(navItems[(index - 1 + navItems.length) % navItems.length].id as any);
     };
 
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><RefreshCw className="animate-spin text-emerald-700" /></div>;
+    if (!archive) return <div className="min-h-screen flex items-center justify-center text-red-600 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua senza salvataggio locale</Button></div>;
+
     return (
         <div className="min-h-screen bg-stone-50">
-            <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-emerald-700 focus:text-white">Vai al contenuto</a>
             <header className="sticky top-0 bg-white border-b z-10">
                 <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-2 overflow-hidden">
@@ -132,84 +124,53 @@ export default function App() {
                         <input aria-label="Nome archivio" value={archive.nome} onChange={e => updateArchive(a => ({...a, nome: e.target.value}))} className="text-xl font-serif font-semibold border-none bg-transparent truncate max-w-[50vw]" />
                     </div>
                     <div className="flex items-center gap-2 sm:hidden relative" ref={menuRef}>
-                        <Button variant="ghost" onClick={() => setShowMenu(!showMenu)}><Menu size={16} /></Button>
+                        <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} aria-label="Menu"><Menu size={16} /></Button>
                         {showMenu && (
-                            <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[200px]">
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {handleNuovo(); setShowMenu(false);}}><FilePlus size={16} />Nuovo</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {handleApri(); setShowMenu(false);}}><FolderOpen size={16} />Apri</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {saveHandlers.current.handleSave(false); setShowMenu(false);}}><Save size={16} />Salva</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {saveHandlers.current.handleSave(true); setShowMenu(false);}}>Salva con nome</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowImportModal(true); setShowMenu(false);}}>Importa/Esporta</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowAdminModal(true); setShowMenu(false);}}><Key size={16} /></Button>
+                            <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[200px] z-25">
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>Archivi</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); setShowMenu(false); }}>Nuovo</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {exportArchiveJson(archive); setShowMenu(false);}}>Esporta JSON</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowGuideModal(true); setShowMenu(false);}}><HelpCircle size={16} />Guida</Button>
+                                <Button variant="ghost" className="w-full justify-start text-red-600" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />Esci</Button>
                             </div>
                         )}
                     </div>
                     <div className="hidden sm:flex items-center gap-2">
-                        <Button variant="ghost" aria-label="Nuovo archivio" onClick={handleNuovo}><FilePlus size={16} />Nuovo</Button>
-                        <Button variant="ghost" aria-label="Apri archivio" onClick={handleApri}><FolderOpen size={16} />Apri</Button>
-                        <Button variant="secondary" onClick={() => saveHandlers.current.handleSave(false)}><Save size={16} />Salva</Button>
-                        <Button variant="primary" onClick={() => saveHandlers.current.handleSave(true)}>Salva con nome</Button>
-                        <Button variant="ghost" onClick={() => setShowImportModal(true)}>Importa/Esporta</Button>
-                        <Button variant="ghost" onClick={() => setShowAdminModal(true)}><Key size={16} className={adminToken ? 'text-emerald-600' : ''} /></Button>
+                        <Button variant="ghost" onClick={() => setShowArchivePicker(true)}>Archivi</Button>
+                        <Button variant="ghost" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); }}>Nuovo</Button>
+                        <Button variant="ghost" onClick={() => exportArchiveJson(archive)}>Esporta JSON</Button>
+                        <Button variant="ghost" aria-label="Guida" onClick={() => setShowGuideModal(true)}><HelpCircle size={16} /></Button>
+                        <Button variant="ghost" onClick={handleLogout}><LogOut size={16} /></Button>
                     </div>
                 </div>
-                <div className="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm text-stone-500 py-1">
-                    <div>{new Intl.NumberFormat('it-IT').format(archive.records.length)} voci | {dirty ? <span className="text-amber-600">Modifiche non salvate</span> : <span className="text-emerald-700">Salvato</span>}</div>
-                    <div>Ultima modifica: {new Date(archive.modificato).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</div>
+                <div className="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm py-1">
+                    <div className={saveState==='error'?'text-red-600':''}>{saveState==='saving'?'Salvataggio...':saveState==='saved'?'Salvato in locale':saveState==='error'?`Errore: ${saveError}`:''} {saveState==='error' && <Button size="sm" variant="ghost" onClick={flush}>Riprova</Button>}</div>
+                    <div>{new Date(archive.modificato).toLocaleString('it-IT')}</div>
                 </div>
-                <nav className="max-w-6xl mx-auto px-4 flex gap-6" role="tablist">
-                    {navItems.map((t, i) => (
-                        <button key={t.id} role="tab" aria-selected={tab === t.id} aria-controls={`${t.id}-panel`} onKeyDown={(e) => handleTabKeyDown(e, i)} onClick={() => setTab(t.id as any)} className={`flex items-center gap-2 py-3 border-b-2 ${tab === t.id ? 'border-emerald-700 text-emerald-700' : 'border-transparent text-stone-600'}`}>
-                            <t.icon size={18} />{t.label}
-                        </button>
-                    ))}
-                </nav>
-                <EmbedBar archive={archive} adminToken={adminToken} onNeedToken={() => setShowAdminModal(true)} onApply={results => {
-                    if (results.length === 0) return;
-                    updateArchive(a => ({...a, records: a.records.map(r => {
-                        const x = results.find((z: any) => z.id === r.id);
-                        return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r;
-                    })}));
+                {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
+                <EmbedBar archive={archive} user={user} onNeedLogin={() => {}} onApply={results => {
+                    updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
                 }} toast={(msg, type) => setToast({message: msg, type})} />
             </header>
             
             <main id="main" className="max-w-6xl mx-auto p-4">
-                <div id="ricerca-panel" role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}>
-                    <SearchTab archive={archive} onOpenRec={id=>{setSelectedId(id); setTab('dati');}} onGoData={()=>setTab('dati')} />
-                </div>
-                <div id="dati-panel" role="tabpanel" className={tab === 'dati' ? '' : 'hidden'}>
-                    <DataTab 
-                        archive={archive} 
-                        setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} 
-                        setDirty={setDirty} 
-                        onGoStructure={() => setTab('struttura')}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        setConfirmDialog={setConfirmDialog}
-                    />
-                </div>
-                <div id="struttura-panel" role="tabpanel" className={tab === 'struttura' ? '' : 'hidden'}>
-                    <StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} />
-                </div>
+                <div id="ricerca-panel" role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={id=>{setSelectedId(id); setTab('dati');}} onGoData={()=>setTab('dati')} /></div>
+                <div id="dati-panel" role="tabpanel" className={tab === 'dati' ? '' : 'hidden'}><DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('struttura')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} /></div>
+                <div id="struttura-panel" role="tabpanel" className={tab === 'struttura' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>
             </main>
 
             <footer className="text-center p-8 text-sm text-stone-500">
                 <p>Strumento di consultazione, non sostituisce un parere medico</p>
                 <p className="text-xs">I risultati sono similarità semantica, non diagnosi</p>
             </footer>
+
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {confirmDialog && <ConfirmDialog {...confirmDialog} />}
-            {showAdminModal && (
-                <Modal title="Token Admin" onClose={() => setShowAdminModal(false)}>
-                    <input type="password" autoComplete="off" value={adminToken} onChange={e => setAdminToken(e.target.value)} className="w-full p-2 border border-stone-300 rounded-lg bg-white focus:border-emerald-700 focus:ring-1 ring-emerald-700" />
-                </Modal>
-            )}
-            {showImportModal && <ImportPanel archive={archive} setArchive={a => updateArchive(a)} setDirty={setDirty} onClose={() => setShowImportModal(false)} toast={(msg, type) => setToast({message: msg, type})} />}
-            {newArchiveModal && (
-                <Modal title="Nuovo archivio" onClose={() => setNewArchiveModal(false)} footer={
-                    <Button onClick={() => { if(newArchiveName) { setArchive(newArchive(newArchiveName)); fileHandle.current=null; setDirty(false); setToast({message: 'Nuovo archivio creato', type: 'success'}); setNewArchiveModal(false); } }}>Conferma</Button>
-                }>
-                    <input autoFocus value={newArchiveName} onChange={e => setNewArchiveName(e.target.value)} className="w-full p-2 border border-stone-300 rounded-lg bg-white focus:border-emerald-700 focus:ring-1 ring-emerald-700" onKeyDown={e => { if(e.key==='Enter' && newArchiveName) { setArchive(newArchive(newArchiveName)); fileHandle.current=null; setDirty(false); setToast({message: 'Nuovo archivio creato', type: 'success'}); setNewArchiveModal(false); }}} />
+            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async id => { const a = await storeRef.current!.get(id); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async a => { const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg, type) => setToast({message: msg, type})} />}
+            
+            {showGuideModal && (
+                <Modal title="Guida all'uso" onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                    <GuideContent />
                 </Modal>
             )}
         </div>
