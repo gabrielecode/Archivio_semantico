@@ -34,10 +34,10 @@ export async function embedRecords(
     let doneRecs = 0;
     
     try {
-        for (let i = 0; i < queue.length; i += 50) {
+        for (let i = 0; i < queue.length; i += 20) {
             if (signal.aborted) throw new Error('Annullato');
             
-            const batch = queue.slice(i, i + 50);
+            const batch = queue.slice(i, i + 20);
             const batchVectors = await fetchEmbeddings(batch.map(b => b.chunk.testo), 'document', token, signal);
             
             // Assign back
