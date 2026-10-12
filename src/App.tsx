@@ -174,9 +174,12 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                 <div id="struttura-panel" role="tabpanel" className={tab === 'struttura' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>
             </main>
 
-            <footer className="text-center p-8 text-sm text-stone-500">
+            <footer className="text-center p-8 text-sm text-stone-500 border-t border-stone-200 mt-12 bg-white">
                 <p>Strumento di consultazione, non sostituisce un parere medico</p>
-                <p className="text-xs">I risultati sono similarità semantica, non diagnosi</p>
+                <p className="text-xs mb-3">I risultati sono similarità semantica, non diagnosi</p>
+                <p className="text-sm font-medium text-stone-700">
+                    Creato da <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
+                </p>
             </footer>
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

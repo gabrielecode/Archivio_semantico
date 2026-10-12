@@ -10,9 +10,10 @@ import {
     User 
 } from 'firebase/auth';
 import { auth, googleProvider } from './lib/firebase';
-import { Button } from './components/ui';
-import { RefreshCw, LogOut } from 'lucide-react';
+import { Button, Modal } from './components/ui';
+import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle } from 'lucide-react';
 import App from './App';
+import GuideContent from './components/GuideContent';
 
 export default function AuthGate() {
     const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -24,6 +25,7 @@ export default function AuthGate() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [infoMsg, setInfoMsg] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -193,156 +195,261 @@ export default function AuthGate() {
         );
     }
 
+    const scrollToSection = (id: string) => {
+        const el = document.getElementById(id);
+        if (el) {
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            el.scrollIntoView({behavior: prefersReduced ? 'auto' : 'smooth'});
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 text-stone-900 text-base">
-                <h1 className="text-2xl font-serif font-bold text-center text-stone-900">
-                    {mode === 'login' && 'Accedi al tuo account'}
-                    {mode === 'register' && 'Crea un account'}
-                    {mode === 'forgot' && 'Password dimenticata'}
-                </h1>
-
-                {infoMsg && <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-sm">{infoMsg}</div>}
-                {errorMsg && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg}</div>}
-
-                {mode === 'login' && (
-                    <div className="space-y-4">
-                        <Button 
-                            variant="secondary" 
-                            className="w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2 border border-stone-300 bg-white hover:bg-stone-50 text-stone-900"
-                            onClick={handleGoogleLogin}
-                            disabled={submitting}
-                        >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                            </svg>
-                            Continua con Google
-                        </Button>
-
-                        <div className="flex items-center my-4">
-                            <div className="flex-grow border-t border-stone-200"></div>
-                            <span className="px-3 text-stone-500 text-sm">oppure con email</span>
-                            <div className="flex-grow border-t border-stone-200"></div>
+        <div className="min-h-screen bg-stone-50 text-stone-900 font-sans antialiased flex flex-col justify-between">
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-emerald-700 focus:text-white">Vai al contenuto principale</a>
+            
+            <div>
+                {/* Header */}
+                <header className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-stone-200 z-40">
+                    <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                                <Leaf size={24} />
+                            </div>
+                            <span className="font-serif font-bold text-xl text-stone-900">Ricerca semantica MTC</span>
                         </div>
-
-                        <form onSubmit={handleEmailLogin} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
-                                <input 
-                                    type="email" 
-                                    required 
-                                    value={email} 
-                                    onChange={e => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                    placeholder="nome@esempio.it"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
-                                <input 
-                                    type="password" 
-                                    required 
-                                    value={password} 
-                                    onChange={e => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                            <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
+                        <nav className="flex items-center gap-4 sm:gap-6">
+                            <button onClick={() => scrollToSection('come-funziona')} className="hidden sm:inline text-stone-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer text-base">
+                                Come funziona
+                            </button>
+                            <button onClick={() => scrollToSection('iniziare')} className="hidden sm:inline text-stone-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer text-base">
+                                Istruzioni
+                            </button>
+                            <Button onClick={() => setShowLoginModal(true)} className="min-h-[44px] text-base px-6 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
                                 Accedi
                             </Button>
-                        </form>
+                        </nav>
+                    </div>
+                </header>
 
-                        <div className="flex justify-between items-center text-sm pt-2">
-                            <button onClick={() => { setMode('register'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium">
-                                Crea un account
-                            </button>
-                            <button onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-stone-600 hover:underline">
-                                Password dimenticata?
-                            </button>
+                {/* Main Landing / Instructions */}
+                <main id="main-content" className="max-w-6xl mx-auto px-4 py-12 space-y-16">
+                    {/* Hero Section */}
+                    <section className="py-12 lg:py-16 grid lg:grid-cols-2 gap-12 items-center">
+                        <div className="space-y-8">
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-stone-900 leading-tight">
+                                Ritrova subito quello che hai scritto
+                            </h1>
+                            <p className="text-xl sm:text-2xl text-stone-600 leading-relaxed">
+                                Il tuo schedario di Medicina Tradizionale Cinese, con una ricerca intelligente che comprende il significato delle parole.
+                            </p>
+                            <div className="flex flex-wrap gap-4 pt-2">
+                                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
+                                    <Shield size={20} className="text-emerald-700 shrink-0" />
+                                    <span>I tuoi dati restano sul tuo dispositivo</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
+                                    <Laptop size={20} className="text-emerald-700 shrink-0" />
+                                    <span>Nessuna installazione</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
+                                    <Smartphone size={20} className="text-emerald-700 shrink-0" />
+                                    <span>Funziona anche da telefono</span>
+                                </div>
+                            </div>
+                            <div className="pt-4">
+                                <Button onClick={() => setShowLoginModal(true)} className="py-4 px-8 text-lg font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg flex items-center gap-3">
+                                    Accedi o Registrati <ArrowRight size={20} />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 sm:p-10 rounded-3xl border border-stone-200 shadow-xl space-y-6">
+                            <h3 className="font-serif font-bold text-2xl text-stone-900">Inizia in pochi secondi</h3>
+                            <p className="text-stone-600 text-lg">
+                                Accedi con il tuo account Google o con la tua email per iniziare a creare il tuo archivio di schede MTC.
+                            </p>
+                            <div className="space-y-4 pt-2">
+                                <Button 
+                                    variant="secondary" 
+                                    className="w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2 border border-stone-300 bg-white hover:bg-stone-50 text-stone-900"
+                                    onClick={() => { setMode('login'); setShowLoginModal(true); }}
+                                >
+                                    Accedi con Google / Email
+                                </Button>
+                                <div className="text-center">
+                                    <button onClick={() => { setMode('register'); setShowLoginModal(true); }} className="text-emerald-700 hover:underline font-medium text-base">
+                                        Non hai un account? Registrati gratis
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Guide & Instructions Component */}
+                    <div className="bg-white p-6 sm:p-12 rounded-3xl border border-stone-200 shadow-sm">
+                        <GuideContent />
+                    </div>
+                </main>
+            </div>
+
+            {/* Footer */}
+            <footer className="bg-white border-t border-stone-200 text-center p-8 text-sm text-stone-500 mt-20 space-y-2">
+                <p>Strumento di consultazione, non sostituisce un parere medico</p>
+                <p className="text-xs">I risultati sono similarità semantica, non diagnosi</p>
+                <p className="text-sm font-medium text-stone-700 pt-2">
+                    Creato da <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
+                </p>
+            </footer>
+
+            {/* Login / Register / Forgot Modal */}
+            {showLoginModal && (
+                <Modal title={
+                    mode === 'login' ? 'Accedi al tuo account' : 
+                    mode === 'register' ? 'Crea un account' : 'Password dimenticata'
+                } onClose={() => setShowLoginModal(false)} className="max-w-md">
+                    <div className="space-y-6 text-stone-900 text-base py-2">
+                        {infoMsg && <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-sm">{infoMsg}</div>}
+                        {errorMsg && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg}</div>}
+
+                        {mode === 'login' && (
+                            <div className="space-y-4">
+                                <Button 
+                                    variant="secondary" 
+                                    className="w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2 border border-stone-300 bg-white hover:bg-stone-50 text-stone-900"
+                                    onClick={handleGoogleLogin}
+                                    disabled={submitting}
+                                >
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                    </svg>
+                                    Continua con Google
+                                </Button>
+
+                                <div className="flex items-center my-4">
+                                    <div className="flex-grow border-t border-stone-200"></div>
+                                    <span className="px-3 text-stone-500 text-sm">oppure con email</span>
+                                    <div className="flex-grow border-t border-stone-200"></div>
+                                </div>
+
+                                <form onSubmit={handleEmailLogin} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
+                                        <input 
+                                            type="email" 
+                                            required 
+                                            value={email} 
+                                            onChange={e => setEmail(e.target.value)}
+                                            className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                            placeholder="nome@esempio.it"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
+                                        <input 
+                                            type="password" 
+                                            required 
+                                            value={password} 
+                                            onChange={e => setPassword(e.target.value)}
+                                            className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
+                                        Accedi
+                                    </Button>
+                                </form>
+
+                                <div className="flex justify-between items-center text-sm pt-2">
+                                    <button onClick={() => { setMode('register'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium">
+                                        Crea un account
+                                    </button>
+                                    <button onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-stone-600 hover:underline">
+                                        Password dimenticata?
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {mode === 'register' && (
+                            <form onSubmit={handleRegister} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        value={email} 
+                                        onChange={e => setEmail(e.target.value)}
+                                        className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        placeholder="nome@esempio.it"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">Password (minimo 8 caratteri)</label>
+                                    <input 
+                                        type="password" 
+                                        required 
+                                        minLength={8}
+                                        value={password} 
+                                        onChange={e => setPassword(e.target.value)}
+                                        className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">Conferma password</label>
+                                    <input 
+                                        type="password" 
+                                        required 
+                                        minLength={8}
+                                        value={confirmPassword} 
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
+                                    Registrati
+                                </Button>
+                                <div className="text-center pt-2">
+                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
+                                        Hai già un account? Accedi
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {mode === 'forgot' && (
+                            <form onSubmit={handleForgot} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">Email registrata</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        value={email} 
+                                        onChange={e => setEmail(e.target.value)}
+                                        className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        placeholder="nome@esempio.it"
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
+                                    Invia istruzioni
+                                </Button>
+                                <div className="text-center pt-2">
+                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
+                                        Torna al login
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        <div className="p-3 bg-stone-100 rounded-xl text-stone-700 text-xs leading-relaxed text-center">
+                            I tuoi archivi restano salvati solo nel tuo browser. Le ricerche utilizzano l'intelligenza artificiale per il calcolo semantico e non salvano i dati sul server.
                         </div>
                     </div>
-                )}
-
-                {mode === 'register' && (
-                    <form onSubmit={handleRegister} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
-                            <input 
-                                type="email" 
-                                required 
-                                value={email} 
-                                onChange={e => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                placeholder="nome@esempio.it"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Password (minimo 8 caratteri)</label>
-                            <input 
-                                type="password" 
-                                required 
-                                minLength={8}
-                                value={password} 
-                                onChange={e => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Conferma password</label>
-                            <input 
-                                type="password" 
-                                required 
-                                minLength={8}
-                                value={confirmPassword} 
-                                onChange={e => setConfirmPassword(e.target.value)}
-                                className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                        <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
-                            Registrati
-                        </Button>
-                        <div className="text-center pt-2">
-                            <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
-                                Hai già un account? Accedi
-                            </button>
-                        </div>
-                    </form>
-                )}
-
-                {mode === 'forgot' && (
-                    <form onSubmit={handleForgot} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Email registrata</label>
-                            <input 
-                                type="email" 
-                                required 
-                                value={email} 
-                                onChange={e => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                placeholder="nome@esempio.it"
-                            />
-                        </div>
-                        <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
-                            Invia istruzioni
-                        </Button>
-                        <div className="text-center pt-2">
-                            <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
-                                Torna al login
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </div>
-
-            <div className="max-w-md w-full mt-6 p-4 bg-stone-200/60 rounded-xl text-stone-700 text-xs leading-relaxed text-center">
-                I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a un servizio di intelligenza artificiale (OpenRouter e il fornitore del modello) per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (email e nome) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
-            </div>
+                </Modal>
+            )}
         </div>
     );
 }
