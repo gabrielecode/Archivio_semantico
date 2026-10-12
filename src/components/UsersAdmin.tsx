@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from './ui';
-import { Users, X, Plus, Key, Edit, Shield, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, X, Plus, Key, Edit, Shield, Trash2, CheckCircle, AlertCircle, RefreshCw, Mail } from 'lucide-react';
 
 interface UsersAdminProps {
     currentUserId: string;
@@ -11,6 +11,7 @@ interface UsersAdminProps {
 interface UserItem {
     id: string;
     name: string;
+    email?: string;
     role: 'admin' | 'user';
     source: 'env' | 'kv';
     created: string;
@@ -26,6 +27,7 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newId, setNewId] = useState('');
     const [newName, setNewName] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [newRole, setNewRole] = useState<'admin' | 'user'>('user');
 
@@ -35,6 +37,10 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
     // Rename modal
     const [renameUserItem, setRenameUserItem] = useState<UserItem | null>(null);
     const [renameVal, setRenameVal] = useState('');
+
+    // Email edit modal
+    const [emailUserItem, setEmailUserItem] = useState<UserItem | null>(null);
+    const [emailVal, setEmailVal] = useState('');
 
     // Confirm delete state
     const [deleteTarget, setDeleteTarget] = useState<UserItem | null>(null);
@@ -91,6 +97,7 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                 body: JSON.stringify({
                     id: newId.trim(),
                     name: newName.trim(),
+                    email: newEmail.trim() || undefined,
                     password: newPassword,
                     role: newRole
                 })
@@ -107,6 +114,7 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
             setShowCreateModal(false);
             setNewId('');
             setNewName('');
+            setNewEmail('');
             setNewPassword('');
             setNewRole('user');
             toast('Utente creato con successo', 'success');
@@ -167,6 +175,25 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
             if (!res.ok) throw new Error(data.error || 'Errore rinomina');
             setRenameUserItem(null);
             toast('Utente rinominato con successo', 'success');
+            fetchUsers();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const handleEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!emailUserItem) return;
+        try {
+            const res = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: emailUserItem.id, action: 'email', email: emailVal.trim() })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Errore modifica email');
+            setEmailUserItem(null);
+            toast('Email aggiornata con successo', 'success');
             fetchUsers();
         } catch (err: any) {
             alert(err.message);
@@ -246,6 +273,7 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                                 <tr className="bg-stone-100 border-b border-stone-200 text-stone-700 text-base font-semibold">
                                     <th className="p-4">ID</th>
                                     <th className="p-4">Nome</th>
+                                    <th className="p-4">Email</th>
                                     <th className="p-4">Ruolo</th>
                                     <th className="p-4">Origine</th>
                                     <th className="p-4 text-right">Azioni</th>
@@ -256,6 +284,7 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                                     <tr key={u.id} className="hover:bg-stone-50">
                                         <td className="p-4 font-mono font-medium text-stone-900">{u.id}</td>
                                         <td className="p-4 text-stone-900">{u.name}</td>
+                                        <td className="p-4 text-stone-700">{u.email || '-'}</td>
                                         <td className="p-4">
                                             <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-stone-100 text-stone-700'}`}>
                                                 {u.role === 'admin' ? <Shield size={14} /> : null}
@@ -271,6 +300,14 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                                                 title="Rinomina"
                                             >
                                                 <Edit size={16} /> Rinomina
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => { setEmailUserItem(u); setEmailVal(u.email || ''); }}
+                                                title="Modifica email"
+                                            >
+                                                <Mail size={16} /> Email
                                             </Button>
                                             <Button
                                                 size="sm"
@@ -337,6 +374,16 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-base font-semibold text-stone-800 mb-1">Email (opzionale)</label>
+                                    <input
+                                        type="email"
+                                        value={newEmail}
+                                        onChange={e => setNewEmail(e.target.value)}
+                                        className="w-full px-4 py-3 border border-stone-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                                        placeholder="mario@esempio.it"
+                                    />
+                                </div>
+                                <div>
                                     <label className="block text-base font-semibold text-stone-800 mb-1">Password temporanea</label>
                                     <div className="flex gap-2">
                                         <input
@@ -394,6 +441,32 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                     </div>
                 )}
 
+                {/* Modal: Edit Email */}
+                {emailUserItem && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-60 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+                            <h3 className="text-xl font-serif font-bold text-stone-900">Modifica Email ({emailUserItem.id})</h3>
+                            <form onSubmit={handleEmailSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-base font-semibold text-stone-800 mb-1">Nuova email</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={emailVal}
+                                        onChange={e => setEmailVal(e.target.value)}
+                                        className="w-full px-4 py-3 border border-stone-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                                        placeholder="mario@esempio.it"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <Button type="button" variant="ghost" onClick={() => setEmailUserItem(null)}>Annulla</Button>
+                                    <Button type="submit" className="bg-emerald-700 text-white hover:bg-emerald-800 text-base px-5 py-3">Salva Email</Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* Modal: Display Generated Password Once */}
                 {generatedPasswordModal && (
                     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-70 p-4">
@@ -405,8 +478,19 @@ export default function UsersAdmin({ currentUserId, onClose, toast }: UsersAdmin
                             <p className="text-stone-600 text-base">
                                 Annotala o comunicala all'utente <strong className="font-mono text-stone-900">{generatedPasswordModal.id}</strong>. Per sicurezza, non sarà più possibile visualizzarla.
                             </p>
-                            <div className="p-4 bg-stone-100 rounded-xl border border-stone-300 select-all font-mono text-xl font-bold text-stone-900 tracking-wider">
-                                {generatedPasswordModal.password}
+                            <div className="flex gap-2 items-center">
+                                <div className="p-4 bg-stone-100 rounded-xl border border-stone-300 select-all font-mono text-xl font-bold text-stone-900 tracking-wider flex-1 text-center">
+                                    {generatedPasswordModal.password}
+                                </div>
+                                <Button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(generatedPasswordModal.password);
+                                        toast('Password copiata negli appunti', 'success');
+                                    }}
+                                    className="bg-emerald-700 text-white hover:bg-emerald-800 px-5 py-3 text-base h-full"
+                                >
+                                    Copia
+                                </Button>
                             </div>
                             <Button
                                 onClick={() => setGeneratedPasswordModal(null)}

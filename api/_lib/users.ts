@@ -99,6 +99,16 @@ export const envUsers = (): User[] => {
     }
 };
 
+export const isAdmin = async (userId: string): Promise<boolean> => {
+    const user = await getUser(userId);
+    return !!user && user.role === 'admin';
+};
+
+export const countAdmins = async (): Promise<number> => {
+    const all = await getAllUsers();
+    return all.filter(u => u.role === 'admin').length;
+};
+
 export const getUser = async (id: string): Promise<User | null> => {
     const norm = normalizeId(id);
     const forceEnv = process.env.FORCE_ENV_USERS === 'true';

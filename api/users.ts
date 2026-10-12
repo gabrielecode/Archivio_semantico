@@ -1,5 +1,5 @@
 import { requireAuth, throttle } from './_lib/auth.js';
-import { getUser, getAllUsers, createUser as createKvUser, validatePassword, isNameTaken, normalizeId, ID_RE, User } from './_lib/users.js';
+import { getUser, getAllUsers, createUser as createKvUser, validatePassword, isNameTaken, normalizeId, ID_RE, User, saveUser, validateEmail, isEmailTaken } from './_lib/users.js';
 import { kvMode, getKv } from './_lib/kv.js';
 import crypto from 'crypto';
 
@@ -24,6 +24,11 @@ export default async (req: any, res: any) => {
         }
     }
 
+    const adminThrottle = await throttle(`admin:${userId}`, 30, 600);
+    if (!adminThrottle.allowed) {
+        return res.status(429).json({ error: 'Troppi tentativi. Riprova più tardi.' });
+    }
+
     const kv = getKv();
 
     if (method === 'GET') {
@@ -32,6 +37,7 @@ export default async (req: any, res: any) => {
             const list = all.map(u => ({
                 id: u.id,
                 name: u.name,
+                email: u.email || '',
                 role: u.role,
                 source: u.source,
                 created: u.created
@@ -44,7 +50,7 @@ export default async (req: any, res: any) => {
     }
 
     if (method === 'POST') {
-        const { id, name, password, role } = req.body || {};
+        const { id, name, password, email, role } = req.body || {};
         const normId = normalizeId(id);
         if (!ID_RE.test(normId)) {
             return res.status(400).json({ error: 'ID non valido (3-64 caratteri alfanumerici, . _ @ -)' });
@@ -55,6 +61,15 @@ export default async (req: any, res: any) => {
         const pwError = validatePassword(password, normId);
         if (pwError) {
             return res.status(400).json({ error: pwError });
+        }
+        let normEmail: string | undefined = undefined;
+        if (email) {
+            const errEmail = validateEmail(email);
+            if (errEmail) return res.status(400).json({ error: errEmail });
+            normEmail = email.trim().toLowerCase();
+            if (await isEmailTaken(normEmail!)) {
+                return res.status(400).json({ error: 'Email già in uso' });
+            }
         }
         const targetRole = role === 'admin' ? 'admin' : 'user';
 
@@ -76,6 +91,7 @@ export default async (req: any, res: any) => {
             id: normId,
             name: name.trim(),
             password,
+            email: normEmail,
             role: targetRole
         });
 
@@ -88,6 +104,7 @@ export default async (req: any, res: any) => {
             user: {
                 id: resCreate.user!.id,
                 name: resCreate.user!.name,
+                email: resCreate.user!.email || '',
                 role: resCreate.user!.role,
                 source: resCreate.user!.source,
                 created: resCreate.user!.created
@@ -96,7 +113,7 @@ export default async (req: any, res: any) => {
     }
 
     if (method === 'PATCH') {
-        const { id, action, newPassword, name, role } = req.body || {};
+        const { id, action, newPassword, name, email, role } = req.body || {};
         const normId = normalizeId(id);
         if (!normId) {
             return res.status(400).json({ error: 'ID utente richiesto' });
@@ -124,7 +141,7 @@ export default async (req: any, res: any) => {
                 source: 'kv'
             };
 
-            await kv.set(`user:${normId}`, JSON.stringify(updated));
+            await saveUser(updated);
             console.log(`[Admin] Password reset for user: ${normId} by admin ${adminUser.id}`);
             return res.status(200).json({ ok: true });
         }
@@ -145,16 +162,34 @@ export default async (req: any, res: any) => {
                 source: 'kv'
             };
 
-            await kv.set(`user:${normId}`, JSON.stringify(updated));
+            await saveUser(updated);
             console.log(`[Admin] User renamed: ${normId} -> ${trimmedName} by admin ${adminUser.id}`);
+            return res.status(200).json({ ok: true });
+        }
+
+        if (action === 'email') {
+            const errEmail = validateEmail(email);
+            if (errEmail) return res.status(400).json({ error: errEmail });
+            const normEmail = email.trim().toLowerCase();
+            const taken = await isEmailTaken(normEmail, normId);
+            if (taken) return res.status(400).json({ error: 'Email già in uso' });
+
+            const updated: User = {
+                ...targetUser,
+                email: normEmail,
+                source: 'kv'
+            };
+
+            await saveUser(updated);
+            console.log(`[Admin] Email changed for ${normId} to ${normEmail} by admin ${adminUser.id}`);
             return res.status(200).json({ ok: true });
         }
 
         if (action === 'role') {
             const newRole = role === 'admin' ? 'admin' : 'user';
             if (targetUser.role === 'admin' && newRole === 'user') {
-                const allUsers = await getAllUsers();
-                const adminCount = allUsers.filter(u => u.role === 'admin').length;
+                const { countAdmins } = await import('./_lib/users.js');
+                const adminCount = await countAdmins();
                 if (adminCount <= 1) {
                     return res.status(400).json({ error: "Impossibile declassare l'ultimo amministratore" });
                 }
@@ -166,7 +201,7 @@ export default async (req: any, res: any) => {
                 source: 'kv'
             };
 
-            await kv.set(`user:${normId}`, JSON.stringify(updated));
+            await saveUser(updated);
             console.log(`[Admin] Role changed for ${normId} to ${newRole} by admin ${adminUser.id}`);
             return res.status(200).json({ ok: true });
         }
@@ -191,8 +226,8 @@ export default async (req: any, res: any) => {
         }
 
         if (targetUser.role === 'admin') {
-            const allUsers = await getAllUsers();
-            const adminCount = allUsers.filter(u => u.role === 'admin').length;
+            const { countAdmins } = await import('./_lib/users.js');
+            const adminCount = await countAdmins();
             if (adminCount <= 1) {
                 return res.status(400).json({ error: "Impossibile eliminare l'ultimo amministratore" });
             }
@@ -202,7 +237,16 @@ export default async (req: any, res: any) => {
             return res.status(503).json({ error: 'Storage non disponibile' });
         }
 
+        // Set sessionsValidFrom before deleting
+        targetUser.sessionsValidFrom = Date.now();
+        await saveUser(targetUser);
+
         await kv.del(`user:${normId}`);
+        if (targetUser.email) {
+            try {
+                await kv.del(`email:${targetUser.email.toLowerCase()}`);
+            } catch {}
+        }
 
         try {
             const indexRaw = await kv.get('users:index');
