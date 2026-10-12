@@ -1,8 +1,13 @@
+import { auth } from '../lib/firebase';
+
 export async function fetchEmbeddings(texts: string[], mode: 'document' | 'query', signal?: AbortSignal): Promise<number[][]> {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : null;
   const response = await fetch('/api/embed', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
     body: JSON.stringify({texts, mode}),
     signal

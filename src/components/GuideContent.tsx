@@ -36,7 +36,7 @@ export default function GuideContent() {
                         <span className="shrink-0 w-10 h-10 bg-emerald-700 text-white rounded-full flex items-center justify-center font-bold text-lg">1</span>
                         <div className="space-y-1">
                             <h3 className="font-semibold text-xl text-stone-900">Accedi</h3>
-                            <p className="text-stone-600">Scrivi il tuo nome utente e la tua password e premi Accedi.</p>
+                            <p className="text-stone-600">Accedi con Google o con email.</p>
                         </div>
                     </li>
                     <li className="flex gap-4 items-start bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
@@ -98,7 +98,7 @@ export default function GuideContent() {
                 <h2 className="text-3xl font-serif font-semibold text-stone-900 border-b pb-3">Dove finiscono le mie schede? (importante)</h2>
                 <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl space-y-4 text-amber-900">
                     <p className="font-medium text-xl">
-                        Le tue schede si salvano da sole, ma SOLO su questo computer e in questo browser (per esempio Chrome). Non vengono inviate a nessuno e nessun altro utente può vederle.
+                        I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a Google Gemini per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (nome, email, stato) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
                     </p>
                     <ul className="space-y-3 pt-2 text-stone-800 list-disc list-inside">
                         <li>Se usi un altro computer o un altro browser, non le troverai.</li>
@@ -115,17 +115,10 @@ export default function GuideContent() {
                 <div className="space-y-4">
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
-                            <span>Come cambio la mia password?</span>
-                            <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
-                        </summary>
-                        <p className="mt-4 text-stone-600 pt-3 border-t">Clicca sul tuo nome utente in alto a destra nella barra superiore e seleziona &apos;Il mio account&apos;. Da lì potrai inserire la password attuale e impostare una nuova password (minimo 8 caratteri).</p>
-                    </details>
-                    <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
-                        <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
                             <span>Ho dimenticato la password.</span>
                             <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
                         </summary>
-                        <p className="mt-4 text-stone-600 pt-3 border-t">Contatta l&apos;amministratore del sistema, che potrà reimpostare la tua password direttamente dal pannello &apos;Gestione utenti&apos;.</p>
+                        <p className="mt-4 text-stone-600 pt-3 border-t">Ho dimenticato la password: usa il link nella schermata di accesso.</p>
                     </details>
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
@@ -140,13 +133,6 @@ export default function GuideContent() {
                             <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
                         </summary>
                         <p className="mt-4 text-stone-600 pt-3 border-t">Sì. Premi &apos;Importa/Esporta&apos;, scarica il modello di Excel, compilalo e caricalo.</p>
-                    </details>
-                    <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
-                        <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
-                            <span>Mi dà un errore &apos;Sessione scaduta&apos;.</span>
-                            <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
-                        </summary>
-                        <p className="mt-4 text-stone-600 pt-3 border-t">Rifai l&apos;accesso con lo stesso nome utente: le modifiche non salvate non vanno perse.</p>
                     </details>
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">

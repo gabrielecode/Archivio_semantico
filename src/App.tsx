@@ -2,20 +2,18 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, User as UserIcon, Shield} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, User as UserIcon} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
 import {EmbedBar} from './components/EmbedBar';
 import {ArchivePicker} from './components/ArchivePicker';
 import GuideContent from './components/GuideContent';
-import AccountDialog from './components/AccountDialog';
-import UsersAdmin from './components/UsersAdmin';
 import {calculateEmbHash} from './utils/chunk';
 import {openStore, Store, subscribe} from './utils/store';
 
-export default function App({user, onLogout}: {user: {id: string, name: string, role?: string}, onLogout: () => void}) {
-    const [currentUser, setCurrentUser] = useState(user);
+export default function App({user, onLogout}: {user: {id: string, name: string, email?: string}, onLogout: () => void}) {
+    const [currentUser] = useState(user);
     const [tab, setTab] = useState<'ricerca' | 'dati' | 'struttura'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
     const [archiveId, setArchiveId] = useState<string | null>(null);
@@ -26,8 +24,6 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
     const [conflict, setConflict] = useState(false);
     const [showArchivePicker, setShowArchivePicker] = useState(false);
     const [showGuideModal, setShowGuideModal] = useState(false);
-    const [showAccountModal, setShowAccountModal] = useState(false);
-    const [showUsersAdminModal, setShowUsersAdminModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const storeRef = useRef<Store | null>(null);
@@ -111,12 +107,6 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
         });
     };
 
-    const navItems = [ {id: 'ricerca', icon: Search, label: 'Ricerca'}, {id: 'dati', icon: Database, label: 'Dati'}, {id: 'struttura', icon: Settings2, label: 'Struttura'}];
-    const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
-        if (e.key === 'ArrowRight') setTab(navItems[(index + 1) % navItems.length].id as any);
-        else if (e.key === 'ArrowLeft') setTab(navItems[(index - 1 + navItems.length) % navItems.length].id as any);
-    };
-
     if (loading) return <div className="min-h-screen flex items-center justify-center"><RefreshCw className="animate-spin text-emerald-700" /></div>;
     if (!archive) return <div className="min-h-screen flex items-center justify-center text-red-600 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua senza salvataggio locale</Button></div>;
 
@@ -132,11 +122,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                         <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} aria-label="Menu"><Menu size={16} /></Button>
                         {showMenu && (
                             <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[220px] z-25 text-stone-900">
-                                <div className="px-4 py-2 border-b border-stone-100 font-semibold text-sm text-stone-700 truncate">{currentUser.name}</div>
-                                <Button variant="ghost" className="w-full justify-start text-stone-800" onClick={() => {setShowAccountModal(true); setShowMenu(false);}}><UserIcon size={16} />Il mio account</Button>
-                                {currentUser.role === 'admin' && (
-                                    <Button variant="ghost" className="w-full justify-start text-stone-800" onClick={() => {setShowUsersAdminModal(true); setShowMenu(false);}}><Shield size={16} />Gestione utenti</Button>
-                                )}
+                                <div className="px-4 py-2 border-b border-stone-100 font-semibold text-sm text-stone-700 truncate">{currentUser.email || currentUser.name}</div>
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>Archivi</Button>
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); setShowMenu(false); }}>Nuovo</Button>
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => {exportArchiveJson(archive); setShowMenu(false);}}>Esporta JSON</Button>
@@ -154,21 +140,15 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                         <div className="relative ml-2 pl-2 border-l border-stone-200">
                             <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">
-                                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                                    {(currentUser.email || currentUser.name || 'U').charAt(0).toUpperCase()}
                                 </div>
-                                <span className="font-medium text-stone-800 truncate max-w-[120px]">{currentUser.name}</span>
+                                <span className="font-medium text-stone-800 truncate max-w-[150px]">{currentUser.email || currentUser.name}</span>
                             </Button>
                             {showMenu && (
                                 <div className="absolute right-0 top-full mt-2 bg-white border rounded-xl shadow-xl py-2 min-w-[220px] z-25 text-stone-900">
                                     <div className="px-4 py-2 border-b border-stone-100">
-                                        <p className="font-semibold text-sm text-stone-900">{currentUser.name}</p>
-                                        <p className="text-xs text-stone-500 font-mono">{currentUser.id}</p>
+                                        <p className="font-semibold text-sm text-stone-900 truncate">{currentUser.email || currentUser.name}</p>
                                     </div>
-                                    <Button variant="ghost" className="w-full justify-start text-stone-800 py-2.5" onClick={() => {setShowAccountModal(true); setShowMenu(false);}}><UserIcon size={16} />Il mio account</Button>
-                                    {currentUser.role === 'admin' && (
-                                        <Button variant="ghost" className="w-full justify-start text-stone-800 py-2.5" onClick={() => {setShowUsersAdminModal(true); setShowMenu(false);}}><Shield size={16} />Gestione utenti</Button>
-                                    )}
-                                    <div className="border-t border-stone-100 my-1"></div>
                                     <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />Esci</Button>
                                 </div>
                             )}
@@ -180,13 +160,13 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                     <div>{new Date(archive.modificato).toLocaleString('it-IT')}</div>
                 </div>
                 {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
-                <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={results => {
+                <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={(results: any) => {
                     updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
-                }} toast={(msg, type) => setToast({message: msg, type})} />
+                }} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />
             </header>
             
             <main id="main" className="max-w-6xl mx-auto p-4">
-                <div id="ricerca-panel" role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={id=>{setSelectedId(id); setTab('dati');}} onGoData={()=>setTab('dati')} /></div>
+                <div id="ricerca-panel" role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('dati');}} onGoData={()=>setTab('dati')} /></div>
                 <div id="dati-panel" role="tabpanel" className={tab === 'dati' ? '' : 'hidden'}><DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('struttura')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} /></div>
                 <div id="struttura-panel" role="tabpanel" className={tab === 'struttura' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>
             </main>
@@ -198,29 +178,12 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {confirmDialog && <ConfirmDialog {...confirmDialog} />}
-            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async id => { const a = await storeRef.current!.get(id); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async a => { const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg, type) => setToast({message: msg, type})} />}
+            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
             
             {showGuideModal && (
                 <Modal title="Guida all'uso" onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
                     <GuideContent />
                 </Modal>
-            )}
-
-            {showAccountModal && (
-                <AccountDialog
-                    user={currentUser}
-                    onClose={() => setShowAccountModal(false)}
-                    onUpdateUser={u => { setCurrentUser(u); setShowAccountModal(false); }}
-                    toast={(msg, type) => setToast({message: msg, type})}
-                />
-            )}
-
-            {showUsersAdminModal && (
-                <UsersAdmin
-                    currentUserId={currentUser.id}
-                    onClose={() => setShowUsersAdminModal(false)}
-                    toast={(msg, type) => setToast({message: msg, type})}
-                />
             )}
         </div>
     );

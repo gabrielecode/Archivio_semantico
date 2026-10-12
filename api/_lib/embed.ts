@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { requireAuth, getAuthStatus } from './auth.js';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-// Minimal structural types for req/res to support Express and Vercel
 type RequestLike = {
     method?: string;
     body: any;
@@ -24,10 +23,36 @@ const getAI = () => {
     return ai;
 };
 
+const JWKS = createRemoteJWKSet(
+    new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
+
+async function verifyAuth(req: RequestLike): Promise<string | null> {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    if (!projectId) return null;
+
+    try {
+        const { payload } = await jwtVerify(token, JWKS, {
+            issuer: `https://securetoken.google.com/${projectId}`,
+            audience: projectId,
+        });
+        if (payload.email_verified !== true) {
+            return null;
+        }
+        return payload.sub as string;
+    } catch (e) {
+        return null;
+    }
+}
+
 const queryRateLimit = new Map<string, { count: number; resetTime: number }>();
 const documentRateLimit = new Map<string, { count: number; resetTime: number }>();
 
-// Note: cache and rate-limit are best-effort per serverless instance (replaced in V3)
 setInterval(() => {
     const now = Date.now();
     for (const [id, data] of queryRateLimit.entries()) {
@@ -39,12 +64,14 @@ setInterval(() => {
 }, 60000).unref();
 
 export const healthHandler = (req: RequestLike, res: ResponseLike) => {
-    res.status(200).json(getAuthStatus());
+    res.status(200).json({ embed: !!process.env.GEMINI_API_KEY });
 };
 
 export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
-    const userId = await requireAuth(req, res);
-    if (!userId) return;
+    const userId = await verifyAuth(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Non autorizzato' });
+    }
 
     const { texts, mode } = req.body;
 
@@ -90,7 +117,7 @@ export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
                 } catch (error: any) {
                     attempts++;
                     if (attempts >= 3 || (error.status !== 429 && error.status !== 503)) {
-                        console.error('Embedding error:', error);
+                        console.error('Embedding error:', { status: error.status, message: error.message });
                         failed = true;
                         if (error.status === 429) return res.status(429).json({ error: 'Embedding rate limited' });
                         return res.status(502).json({ error: 'Embedding failed' });
@@ -101,7 +128,7 @@ export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
         }
         res.status(200).json({ vectors });
     } catch (error: any) {
-        console.error(error);
+        console.error({ status: error.status, message: error.message });
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 };
