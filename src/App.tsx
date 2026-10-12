@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, User as UserIcon} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, User as UserIcon, Globe, Cloud} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
@@ -11,8 +11,12 @@ import {ArchivePicker} from './components/ArchivePicker';
 import GuideContent from './components/GuideContent';
 import {calculateEmbHash} from './utils/chunk';
 import {openStore, Store, subscribe} from './utils/store';
+import {useTranslation} from './utils/i18n';
+import {useDriveBackup} from './utils/useDriveBackup';
+import {DriveBackupDialog} from './components/DriveBackupDialog';
 
 export default function App({user, onLogout}: {user: {id: string, name: string, email?: string}, onLogout: () => void}) {
+    const {lang, setLang, t} = useTranslation();
     const [currentUser] = useState(user);
     const [tab, setTab] = useState<'ricerca' | 'dati' | 'struttura'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
@@ -24,14 +28,18 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
     const [conflict, setConflict] = useState(false);
     const [showArchivePicker, setShowArchivePicker] = useState(false);
     const [showGuideModal, setShowGuideModal] = useState(false);
+    const [showDriveDialog, setShowDriveDialog] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const storeRef = useRef<Store | null>(null);
+    const [storeInstance, setStoreInstance] = useState<Store | null>(null);
     const archiveRef = useRef<Archive | null>(null);
     const timerRef = useRef<number | null>(null);
     const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
     const [confirmDialog, setConfirmDialog] = useState<any>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    const driveBackup = useDriveBackup(currentUser.id, currentUser.email, storeInstance);
 
     useEffect(() => {
         if (!user) return;
@@ -39,13 +47,14 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
             try {
                 const store = await openStore(user.id);
                 storeRef.current = store;
+                setStoreInstance(store);
                 const id = await store.getLast();
                 let lastId = id;
                 if (!lastId) {
                     const list = await store.list();
                     if (list.length > 0) lastId = list[0].id;
                     else {
-                        const a = newArchive('Il mio archivio');
+                        const a = newArchive(lang === 'de' ? 'Mein Archiv' : 'Il mio archivio');
                         lastId = crypto.randomUUID();
                         await store.put(lastId, a);
                         await store.setLast(lastId);
@@ -53,7 +62,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                 }
                 const a = await store.get(lastId!);
                 if (a) { 
-                    if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'});
+                    if ((a as any).__upgraded) setToast({message: lang === 'de' ? 'Index neu generieren: Embedding generieren drücken' : 'Indice da rigenerare: premi Genera embedding', type: 'error'});
                     setArchive(a); setArchiveId(lastId); archiveRef.current = a; 
                 }
                 setLoading(false);
@@ -61,7 +70,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
         })();
         const unsub = subscribe(user.id, (msg) => { if (msg.id === archiveId) setConflict(true); });
         return () => unsub();
-    }, [user?.id, archiveId]);
+    }, [user?.id, archiveId, lang]);
 
     useEffect(() => {
         archiveRef.current = archive;
@@ -99,8 +108,8 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
 
     const handleLogout = () => {
         setConfirmDialog({
-            title: 'Logout',
-            message: 'Vuoi uscire? Le modifiche salvate in locale rimarranno sul dispositivo.',
+            title: t('logout'),
+            message: lang === 'de' ? 'Möchten Sie sich abmelden? Lokal gespeicherte Änderungen bleiben auf dem Gerät.' : 'Vuoi uscire? Le modifiche salvate in locale rimarranno sul dispositivo.',
             onConfirm: async () => {
                 await flush();
                 onLogout();
@@ -111,7 +120,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center"><RefreshCw className="animate-spin text-emerald-700" /></div>;
-    if (!archive) return <div className="min-h-screen flex items-center justify-center text-red-600 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua senza salvataggio locale</Button></div>;
+    if (!archive) return <div className="min-h-screen flex items-center justify-center text-red-600 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>{lang === 'de' ? 'Ohne lokales Speichern fortfahren' : 'Continua senza salvataggio locale'}</Button></div>;
 
     return (
         <div className="min-h-screen bg-stone-50">
@@ -126,19 +135,30 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                         {showMenu && (
                             <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[220px] z-25 text-stone-900">
                                 <div className="px-4 py-2 border-b border-stone-100 font-semibold text-sm text-stone-700 truncate">{currentUser.email || currentUser.name}</div>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>Archivi</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); setShowMenu(false); }}>Nuovo</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {exportArchiveJson(archive); setShowMenu(false);}}>Esporta JSON</Button>
-                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowGuideModal(true); setShowMenu(false);}}><HelpCircle size={16} />Guida</Button>
-                                <Button variant="ghost" className="w-full justify-start text-red-600" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />Esci</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>{t('archives')}</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => { const a = newArchive(lang === 'de' ? 'Neu' : 'Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); setShowMenu(false); }}>{t('newArchive')}</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {exportArchiveJson(archive); setShowMenu(false);}}>{t('exportJson')}</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}}><Cloud size={16} />{t('driveBackupMenu')}</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowGuideModal(true); setShowMenu(false);}}><HelpCircle size={16} />{t('guide')}</Button>
+                                <Button variant="ghost" className="w-full justify-start" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }}><Globe size={16} />{lang === 'it' ? 'Deutsch' : 'Italiano'}</Button>
+                                <Button variant="ghost" className="w-full justify-start text-red-600" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />{t('logout')}</Button>
                             </div>
                         )}
                     </div>
                     <div className="hidden sm:flex items-center gap-2">
-                        <Button variant="ghost" onClick={() => setShowArchivePicker(true)}>Archivi</Button>
-                        <Button variant="ghost" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); }}>Nuovo</Button>
-                        <Button variant="ghost" onClick={() => exportArchiveJson(archive)}>Esporta JSON</Button>
+                        <Button variant="ghost" onClick={() => setShowArchivePicker(true)}>{t('archives')}</Button>
+                        <Button variant="ghost" onClick={() => { const a = newArchive(lang === 'de' ? 'Neu' : 'Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); }}>{t('newArchive')}</Button>
+                        <Button variant="ghost" onClick={() => exportArchiveJson(archive)}>{t('exportJson')}</Button>
                         <Button variant="ghost" aria-label="Guida" onClick={() => setShowGuideModal(true)}><HelpCircle size={16} /></Button>
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => setLang(lang === 'it' ? 'de' : 'it')}
+                            className="flex items-center gap-1 px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs font-semibold"
+                            aria-label="Cambia lingua"
+                        >
+                            <Globe size={14} className="text-emerald-700" />
+                            <span className="uppercase">{lang}</span>
+                        </Button>
                         
                         <div className="relative ml-2 pl-2 border-l border-stone-200">
                             <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} className="flex items-center gap-2">
@@ -152,17 +172,26 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                                     <div className="px-4 py-2 border-b border-stone-100">
                                         <p className="font-semibold text-sm text-stone-900 truncate">{currentUser.email || currentUser.name}</p>
                                     </div>
-                                    <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />Esci</Button>
+                                    <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}}><Cloud size={16} className="mr-2" />{t('driveBackupMenu')}</Button>
+                                    <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />{t('logout')}</Button>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
                 <div className="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm py-1">
-                    <div className={saveState==='error'?'text-red-600':''}>{saveState==='saving'?'Salvataggio...':saveState==='saved'?'Salvato in locale':saveState==='error'?`Errore: ${saveError}`:''} {saveState==='error' && <Button size="sm" variant="ghost" onClick={flush}>Riprova</Button>}</div>
-                    <div>{new Date(archive.modificato).toLocaleString('it-IT')}</div>
+                    <div className={saveState==='error'?'text-red-600':''}>{saveState==='saving'?t('saving'):saveState==='saved'?t('savedLocal'):saveState==='error'?`${t('errorPrefix')}${saveError}`:''} {saveState==='error' && <Button size="sm" variant="ghost" onClick={flush}>{t('retry')}</Button>}</div>
+                    <div>{new Date(archive.modificato).toLocaleString(lang === 'de' ? 'de-DE' : 'it-IT')}</div>
                 </div>
-                {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
+                {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">{t('conflictMsg')}<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); if ((a as any).__upgraded) setToast({message: lang === 'de' ? 'Index neu generieren' : 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>{t('reload')}</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>{t('overwrite')}</Button></div>}
+                {driveBackup.suspended && (
+                    <div className="bg-amber-100 border-b border-amber-300 p-3 text-center text-sm font-semibold flex items-center justify-center gap-3 text-amber-900">
+                        <span>{t('backupInPause')}</span>
+                        <Button size="sm" onClick={driveBackup.connect} className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
+                            Collega Google Drive
+                        </Button>
+                    </div>
+                )}
                 <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={(results: any) => {
                     updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
                 }} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />
@@ -175,21 +204,36 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
             </main>
 
             <footer className="text-center p-8 text-sm text-stone-500 border-t border-stone-200 mt-12 bg-white">
-                <p>Strumento di consultazione, non sostituisce un parere medico</p>
-                <p className="text-xs mb-3">I risultati sono similarità semantica, non diagnosi</p>
+                <p>{t('disclaimerConsultation')}</p>
+                <p className="text-xs mb-3">{t('disclaimerSimilarity')}</p>
                 <p className="text-sm font-medium text-stone-700">
-                    Creato da <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
+                    {t('createdBylabel')} <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
                 </p>
             </footer>
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {confirmDialog && <ConfirmDialog {...confirmDialog} />}
-            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
+            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: lang === 'de' ? 'Index neu generieren' : 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { if ((a as any).__upgraded) setToast({message: lang === 'de' ? 'Index neu generieren' : 'Indice da rigenerare', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
             
             {showGuideModal && (
-                <Modal title="Guida all'uso" onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                <Modal title={t('guideTitle')} onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
                     <GuideContent />
                 </Modal>
+            )}
+
+            {showDriveDialog && storeInstance && (
+                <DriveBackupDialog 
+                    store={storeInstance} 
+                    driveBackup={driveBackup} 
+                    onClose={() => setShowDriveDialog(false)} 
+                    onOpenArchive={async (id: string, a: Archive) => {
+                        setArchive(a); 
+                        archiveRef.current = a; 
+                        setArchiveId(id); 
+                        await storeInstance.setLast(id);
+                    }} 
+                    toast={(msg, type) => setToast({message: msg, type})} 
+                />
             )}
         </div>
     );

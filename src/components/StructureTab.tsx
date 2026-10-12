@@ -3,10 +3,12 @@ import {Archive} from '../types';
 import {Button, ConfirmDialog} from './ui';
 import {Plus, Trash2, Edit2, Check} from 'lucide-react';
 import {DEFAULT_CAMPI} from '../utils/archive';
+import {useTranslation} from '../utils/i18n';
 
 export function StructureTab({archive, setArchive, setDirty}: {
     archive: Archive, setArchive: (a: Archive) => void, setDirty: (d: boolean) => void
 }) {
+    const {t} = useTranslation();
     const [newTipo, setNewTipo] = useState('');
     const [newCampoEtichetta, setNewCampoEtichetta] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<any>(null);
@@ -42,8 +44,8 @@ export function StructureTab({archive, setArchive, setDirty}: {
     const deleteTipo = (tipo: string) => {
         const count = archive.records.filter(r => r.tipo === tipo).length;
         setConfirmDelete({
-            title: 'Eliminare tipo',
-            message: `Eliminare il tipo "${tipo}"? Verranno modificate ${count} voci.`,
+            title: t('deleteTipoTitle'),
+            message: `${t('deleteTipoMsg')} "${tipo}"? Verranno modificate ${count} voci.`,
             danger: true,
             onConfirm: () => {
                 setArchive({
@@ -82,8 +84,8 @@ export function StructureTab({archive, setArchive, setDirty}: {
 
     const deleteCampo = (chiave: string) => {
         setConfirmDelete({
-            title: 'Eliminare campo',
-            message: 'Rimuove il campo da tutte le voci.',
+            title: t('deleteCampoTitle'),
+            message: t('deleteCampoMsg'),
             danger: true,
             onConfirm: () => {
                 setArchive({
@@ -103,11 +105,11 @@ export function StructureTab({archive, setArchive, setDirty}: {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-serif">Struttura Archivio</h2>
-            <p className="text-sm text-stone-600">I campi sono metadati brevi (max ~300 caratteri totali nell'intestazione indicizzata); i testi lunghi vanno in Contenuto.</p>
+            <h2 className="text-xl font-serif">{t('structureTitle')}</h2>
+            <p className="text-sm text-stone-600">{t('structureSub')}</p>
 
             <div className="bg-white p-4 border rounded">
-                <h3 className="font-semibold mb-2">Tipi</h3>
+                <h3 className="font-semibold mb-2">{t('typesHeader')}</h3>
                 <div className="space-y-2">
                     {archive.schema.tipi.map(t => (
                         <div key={t} className="flex items-center gap-2">
@@ -121,14 +123,14 @@ export function StructureTab({archive, setArchive, setDirty}: {
                         </div>
                     ))}
                     <div className="flex gap-2">
-                        <input value={newTipo} onChange={e => setNewTipo(e.target.value)} placeholder="Nuovo tipo..." className="border rounded p-2 flex-1" />
+                        <input value={newTipo} onChange={e => setNewTipo(e.target.value)} placeholder={t('newTipoPlaceholder')} className="border rounded p-2 flex-1" />
                         <Button onClick={addTipo}><Plus size={16} /></Button>
                     </div>
                 </div>
             </div>
 
             <div className="bg-white p-4 border rounded">
-                <h3 className="font-semibold mb-2">Campi</h3>
+                <h3 className="font-semibold mb-2">{t('fieldsHeader')}</h3>
                 <div className="space-y-2">
                     {archive.schema.campi.map(c => (
                         <div key={c.chiave} className="flex items-center gap-2">
@@ -142,7 +144,7 @@ export function StructureTab({archive, setArchive, setDirty}: {
                         </div>
                     ))}
                     <div className="flex gap-2">
-                        <input value={newCampoEtichetta} onChange={e => setNewCampoEtichetta(e.target.value)} placeholder="Nuovo campo..." className="border rounded p-2 flex-1" />
+                        <input value={newCampoEtichetta} onChange={e => setNewCampoEtichetta(e.target.value)} placeholder={t('newCampoPlaceholder')} className="border rounded p-2 flex-1" />
                         <Button onClick={addCampo}><Plus size={16} /></Button>
                     </div>
                     <Button variant="secondary" onClick={() => {
@@ -151,7 +153,7 @@ export function StructureTab({archive, setArchive, setDirty}: {
                             setArchive({...archive, schema: {...archive.schema, campi: [...archive.schema.campi, ...missing]}});
                             setDirty(true);
                         }
-                    }}>Aggiungi campi predefiniti</Button>
+                    }}>{t('addDefaultFields')}</Button>
                 </div>
             </div>
             {confirmDelete && <ConfirmDialog {...confirmDelete} />}

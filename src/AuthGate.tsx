@@ -11,11 +11,13 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from './lib/firebase';
 import { Button, Modal } from './components/ui';
-import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle } from 'lucide-react';
+import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle, Globe, Cloud } from 'lucide-react';
 import App from './App';
 import GuideContent from './components/GuideContent';
+import { useTranslation } from './utils/i18n';
 
 export default function AuthGate() {
+    const { lang, setLang, t } = useTranslation();
     const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -38,21 +40,21 @@ export default function AuthGate() {
     const translateFirebaseError = (err: any) => {
         const code = err?.code || '';
         if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) {
-            return 'Credenziali non valide';
+            return t('errorInvalidCredentials');
         }
         if (code.includes('email-already-in-use')) {
-            return 'Email già registrata';
+            return t('errorEmailInUse');
         }
         if (code.includes('weak-password')) {
-            return 'La password deve essere di almeno 8 caratteri';
+            return t('errorWeakPassword');
         }
         if (code.includes('invalid-email')) {
-            return 'Indirizzo email non valido';
+            return t('errorInvalidEmail');
         }
         if (code.includes('too-many-requests')) {
-            return 'Troppi tentativi falliti, riprova più tardi';
+            return t('errorTooManyRequests');
         }
-        return 'Errore durante l\'autenticazione, riprova';
+        return t('errorAuthGeneral');
     };
 
     const handleGoogleLogin = async () => {
@@ -84,18 +86,18 @@ export default function AuthGate() {
         e.preventDefault();
         setErrorMsg(null);
         if (password.length < 8) {
-            setErrorMsg('La password deve essere di almeno 8 caratteri');
+            setErrorMsg(t('errorWeakPassword'));
             return;
         }
         if (password !== confirmPassword) {
-            setErrorMsg('Le password non coincidono');
+            setErrorMsg(t('errorPasswordMatch'));
             return;
         }
         setSubmitting(true);
         try {
             const cred = await createUserWithEmailAndPassword(auth, email, password);
             await sendEmailVerification(cred.user);
-            setInfoMsg('Account creato. Ti abbiamo inviato un\'email di verifica.');
+            setInfoMsg(t('accountCreatedVerify'));
             setMode('login');
         } catch (e: any) {
             setErrorMsg(translateFirebaseError(e));
@@ -110,10 +112,10 @@ export default function AuthGate() {
         setSubmitting(true);
         try {
             await sendPasswordResetEmail(auth, email);
-            setInfoMsg('Se l\'indirizzo è registrato riceverai un\'email');
+            setInfoMsg(t('passwordResetSent'));
             setMode('login');
         } catch (e: any) {
-            setInfoMsg('Se l\'indirizzo è registrato riceverai un\'email');
+            setInfoMsg(t('passwordResetSent'));
             setMode('login');
         } finally {
             setSubmitting(false);
@@ -125,9 +127,9 @@ export default function AuthGate() {
         setSubmitting(true);
         try {
             await sendEmailVerification(firebaseUser);
-            setInfoMsg('Email di verifica inviata nuovamente.');
+            setInfoMsg(t('emailSentNotice'));
         } catch (e: any) {
-            setErrorMsg('Impossibile inviare l\'email di verifica, riprova più tardi.');
+            setErrorMsg(t('errorAuthGeneral'));
         } finally {
             setSubmitting(false);
         }
@@ -159,21 +161,30 @@ export default function AuthGate() {
         return (
             <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 text-stone-900 text-base">
-                    <h1 className="text-2xl font-serif font-bold text-center text-stone-900">Controlla la tua email</h1>
+                    <div className="flex justify-end">
+                        <button 
+                            onClick={() => setLang(lang === 'it' ? 'de' : 'it')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 text-sm font-medium hover:bg-stone-100"
+                        >
+                            <Globe size={16} className="text-emerald-700" />
+                            {lang === 'it' ? 'Deutsch' : 'Italiano'}
+                        </button>
+                    </div>
+                    <h1 className="text-2xl font-serif font-bold text-center text-stone-900">{t('checkEmailTitle')}</h1>
                     <p className="text-stone-700 text-base text-center">
-                        Abbiamo inviato un link di verifica a <span className="font-semibold">{firebaseUser.email}</span>. Clicca sul link per attivare il tuo account.
+                        {t('checkEmailSub')} <span className="font-semibold">{firebaseUser.email}</span>{t('clickLinkActivate')}
                     </p>
                     {infoMsg && <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-sm">{infoMsg}</div>}
                     {errorMsg && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg}</div>}
                     <div className="space-y-3">
                         <Button className="w-full py-3 text-base" onClick={handleCheckVerification} disabled={submitting}>
-                            Ho verificato
+                            {t('verifiedBtn')}
                         </Button>
                         <Button variant="secondary" className="w-full py-3 text-base" onClick={handleResendVerification} disabled={submitting}>
-                            Reinvia email
+                            {t('resendBtn')}
                         </Button>
                         <Button variant="ghost" className="w-full py-3 text-base text-red-600" onClick={() => signOut(auth)}>
-                            <LogOut size={18} className="mr-2" /> Esci
+                            <LogOut size={18} className="mr-2" /> {t('logout')}
                         </Button>
                     </div>
                 </div>
@@ -205,8 +216,6 @@ export default function AuthGate() {
 
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900 font-sans antialiased flex flex-col justify-between">
-            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-emerald-700 focus:text-white">Vai al contenuto principale</a>
-            
             <div>
                 {/* Header */}
                 <header className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-stone-200 z-40">
@@ -215,57 +224,72 @@ export default function AuthGate() {
                             <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
                                 <Leaf size={24} />
                             </div>
-                            <span className="font-serif font-bold text-xl text-stone-900">Ricerca semantica MTC</span>
+                            <span className="font-serif font-bold text-xl text-stone-900">{t('appName')}</span>
                         </div>
                         <nav className="flex items-center gap-4 sm:gap-6">
                             <button onClick={() => scrollToSection('come-funziona')} className="hidden sm:inline text-stone-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer text-base">
-                                Come funziona
+                                {t('howItWorks')}
                             </button>
                             <button onClick={() => scrollToSection('iniziare')} className="hidden sm:inline text-stone-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer text-base">
-                                Istruzioni
+                                {t('instructions')}
+                            </button>
+                            <button 
+                                onClick={() => setLang(lang === 'it' ? 'de' : 'it')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 text-sm font-medium hover:bg-stone-100 cursor-pointer"
+                                aria-label="Cambia lingua"
+                            >
+                                <Globe size={16} className="text-emerald-700" />
+                                <span className="uppercase font-semibold">{lang}</span>
                             </button>
                             <Button onClick={() => setShowLoginModal(true)} className="min-h-[44px] text-base px-6 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
-                                Accedi
+                                {t('login')}
                             </Button>
                         </nav>
                     </div>
                 </header>
 
                 {/* Main Landing / Instructions */}
-                <main id="main-content" className="max-w-6xl mx-auto px-4 py-12 space-y-16">
+                <main className="max-w-6xl mx-auto px-4 py-12 space-y-16">
                     {/* Hero Section */}
                     <section className="py-12 lg:py-16 grid lg:grid-cols-2 gap-12 items-center">
                         <div className="space-y-8">
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-stone-900 leading-tight">
-                                Ritrova subito quello che hai scritto
+                                {t('heroTitle')}
                             </h1>
                             <p className="text-xl sm:text-2xl text-stone-600 leading-relaxed">
-                                Il tuo schedario di Medicina Tradizionale Cinese, con una ricerca intelligente che comprende il significato delle parole.
+                                {t('heroSub')}
                             </p>
                             <div className="flex flex-wrap gap-4 pt-2">
                                 <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
                                     <Shield size={20} className="text-emerald-700 shrink-0" />
-                                    <span>I tuoi dati restano sul tuo dispositivo</span>
+                                    <span>{t('feature1')}</span>
                                 </div>
                                 <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
                                     <Laptop size={20} className="text-emerald-700 shrink-0" />
-                                    <span>Nessuna installazione</span>
+                                    <span>{t('feature2')}</span>
                                 </div>
                                 <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
                                     <Smartphone size={20} className="text-emerald-700 shrink-0" />
-                                    <span>Funziona anche da telefono</span>
+                                    <span>{t('feature3')}</span>
                                 </div>
+                                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-stone-200 shadow-sm text-stone-700 text-base">
+                                    <Cloud size={20} className="text-emerald-700 shrink-0" />
+                                    <span>{t('driveBackupMenu')}</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-900 text-base leading-relaxed">
+                                {t('drivePrivacyNotice')}
                             </div>
                             <div className="pt-4">
                                 <Button onClick={() => setShowLoginModal(true)} className="py-4 px-8 text-lg font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg flex items-center gap-3">
-                                    Accedi o Registrati <ArrowRight size={20} />
+                                    {t('ctaStart')} <ArrowRight size={20} />
                                 </Button>
                             </div>
                         </div>
                         <div className="bg-white p-8 sm:p-10 rounded-3xl border border-stone-200 shadow-xl space-y-6">
-                            <h3 className="font-serif font-bold text-2xl text-stone-900">Inizia in pochi secondi</h3>
+                            <h3 className="font-serif font-bold text-2xl text-stone-900">{t('quickStart')}</h3>
                             <p className="text-stone-600 text-lg">
-                                Accedi con il tuo account Google o con la tua email per iniziare a creare il tuo archivio di schede MTC.
+                                {t('quickStartSub')}
                             </p>
                             <div className="space-y-4 pt-2">
                                 <Button 
@@ -273,11 +297,11 @@ export default function AuthGate() {
                                     className="w-full py-3.5 text-base font-semibold flex items-center justify-center gap-2 border border-stone-300 bg-white hover:bg-stone-50 text-stone-900"
                                     onClick={() => { setMode('login'); setShowLoginModal(true); }}
                                 >
-                                    Accedi con Google / Email
+                                    {t('loginGoogleEmail')}
                                 </Button>
                                 <div className="text-center">
-                                    <button onClick={() => { setMode('register'); setShowLoginModal(true); }} className="text-emerald-700 hover:underline font-medium text-base">
-                                        Non hai un account? Registrati gratis
+                                    <button onClick={() => { setMode('register'); setShowLoginModal(true); }} className="text-emerald-700 hover:underline font-medium text-base cursor-pointer">
+                                        {t('noAccount')}
                                     </button>
                                 </div>
                             </div>
@@ -293,18 +317,18 @@ export default function AuthGate() {
 
             {/* Footer */}
             <footer className="bg-white border-t border-stone-200 text-center p-8 text-sm text-stone-500 mt-20 space-y-2">
-                <p>Strumento di consultazione, non sostituisce un parere medico</p>
-                <p className="text-xs">I risultati sono similarità semantica, non diagnosi</p>
+                <p>{t('disclaimerConsultation')}</p>
+                <p className="text-xs">{t('disclaimerSimilarity')}</p>
                 <p className="text-sm font-medium text-stone-700 pt-2">
-                    Creato da <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
+                    {t('createdBylabel')} <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
                 </p>
             </footer>
 
             {/* Login / Register / Forgot Modal */}
             {showLoginModal && (
                 <Modal title={
-                    mode === 'login' ? 'Accedi al tuo account' : 
-                    mode === 'register' ? 'Crea un account' : 'Password dimenticata'
+                    mode === 'login' ? t('loginAccountTitle') : 
+                    mode === 'register' ? t('createAccountTitle') : t('forgotPassword')
                 } onClose={() => setShowLoginModal(false)} className="max-w-md">
                     <div className="space-y-6 text-stone-900 text-base py-2">
                         {infoMsg && <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-sm">{infoMsg}</div>}
@@ -324,29 +348,29 @@ export default function AuthGate() {
                                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                                     </svg>
-                                    Continua con Google
+                                    {t('continueGoogle')}
                                 </Button>
 
                                 <div className="flex items-center my-4">
                                     <div className="flex-grow border-t border-stone-200"></div>
-                                    <span className="px-3 text-stone-500 text-sm">oppure con email</span>
+                                    <span className="px-3 text-stone-500 text-sm">{t('orEmail')}</span>
                                     <div className="flex-grow border-t border-stone-200"></div>
                                 </div>
 
                                 <form onSubmit={handleEmailLogin} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
+                                        <label className="block text-sm font-medium text-stone-700 mb-1">E-mail</label>
                                         <input 
                                             type="email" 
                                             required 
                                             value={email} 
                                             onChange={e => setEmail(e.target.value)}
                                             className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                            placeholder="nome@esempio.it"
+                                            placeholder={t('emailPlaceholder')}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
+                                        <label className="block text-sm font-medium text-stone-700 mb-1">{t('passwordLabel')}</label>
                                         <input 
                                             type="password" 
                                             required 
@@ -357,16 +381,16 @@ export default function AuthGate() {
                                         />
                                     </div>
                                     <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
-                                        Accedi
+                                        {t('login')}
                                     </Button>
                                 </form>
 
                                 <div className="flex justify-between items-center text-sm pt-2">
-                                    <button onClick={() => { setMode('register'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium">
-                                        Crea un account
+                                    <button onClick={() => { setMode('register'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium cursor-pointer">
+                                        {t('createAccountTitle')}
                                     </button>
-                                    <button onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-stone-600 hover:underline">
-                                        Password dimenticata?
+                                    <button onClick={() => { setMode('forgot'); setErrorMsg(null); setInfoMsg(null); }} className="text-stone-600 hover:underline cursor-pointer">
+                                        {t('forgotPassword')}
                                     </button>
                                 </div>
                             </div>
@@ -375,18 +399,18 @@ export default function AuthGate() {
                         {mode === 'register' && (
                             <form onSubmit={handleRegister} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">E-mail</label>
                                     <input 
                                         type="email" 
                                         required 
                                         value={email} 
                                         onChange={e => setEmail(e.target.value)}
                                         className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                        placeholder="nome@esempio.it"
+                                        placeholder={t('emailPlaceholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 mb-1">Password (minimo 8 caratteri)</label>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('min8Chars')}</label>
                                     <input 
                                         type="password" 
                                         required 
@@ -398,7 +422,7 @@ export default function AuthGate() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 mb-1">Conferma password</label>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('confirmPasswordLabel')}</label>
                                     <input 
                                         type="password" 
                                         required 
@@ -410,11 +434,11 @@ export default function AuthGate() {
                                     />
                                 </div>
                                 <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
-                                    Registrati
+                                    {t('createAccountTitle')}
                                 </Button>
                                 <div className="text-center pt-2">
-                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
-                                        Hai già un account? Accedi
+                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm cursor-pointer">
+                                        {t('alreadyHaveAccount')}
                                     </button>
                                 </div>
                             </form>
@@ -423,29 +447,29 @@ export default function AuthGate() {
                         {mode === 'forgot' && (
                             <form onSubmit={handleForgot} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 mb-1">Email registrata</label>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">E-mail</label>
                                     <input 
                                         type="email" 
                                         required 
                                         value={email} 
                                         onChange={e => setEmail(e.target.value)}
                                         className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                        placeholder="nome@esempio.it"
+                                        placeholder={t('emailPlaceholder')}
                                     />
                                 </div>
                                 <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
-                                    Invia istruzioni
+                                    {t('sendInstructions')}
                                 </Button>
                                 <div className="text-center pt-2">
-                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm">
-                                        Torna al login
+                                    <button type="button" onClick={() => { setMode('login'); setErrorMsg(null); setInfoMsg(null); }} className="text-emerald-700 hover:underline font-medium text-sm cursor-pointer">
+                                        {t('backToLogin')}
                                     </button>
                                 </div>
                             </form>
                         )}
 
                         <div className="p-3 bg-stone-100 rounded-xl text-stone-700 text-xs leading-relaxed text-center">
-                            I tuoi archivi restano salvati solo nel tuo browser. Le ricerche utilizzano l'intelligenza artificiale per il calcolo semantico e non salvano i dati sul server.
+                            {t('localNotice')}
                         </div>
                     </div>
                 </Modal>

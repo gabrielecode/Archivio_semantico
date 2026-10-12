@@ -4,6 +4,7 @@ import {Archive, Rec, EMB_DIM} from '../types';
 import {fetchEmbeddings} from '../utils/api';
 import {Button, Badge, EmptyState} from './ui';
 import {buildHeader} from '../utils/chunk';
+import {useTranslation} from '../utils/i18n';
 
 function cosineSimilarity(a: number[], b: number[]): number {
     let dotProduct = 0;
@@ -23,6 +24,7 @@ function normalizeText(text: string): string {
 }
 
 export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onOpenRec: (id: string) => void, onGoData: () => void}) => {
+    const {t} = useTranslation();
     const [query, setQuery] = useState('');
     const [tipo, setTipo] = useState('');
     const [tag, setTag] = useState('');
@@ -90,7 +92,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
             newResults.sort((a, b) => b.score - a.score);
             setResults(newResults);
         } catch (e: unknown) {
-            if (e instanceof Error && e.name !== 'AbortError') setError('Errore durante la ricerca');
+            if (e instanceof Error && e.name !== 'AbortError') setError(t('errorPrefix') + e.message);
         } finally {
             setLoading(false);
         }
@@ -107,29 +109,29 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
     const displayedResults = results?.slice(0, topN);
     const topScore = displayedResults && displayedResults.length > 0 ? displayedResults[0].score : 1;
 
-    if (validRecords.length === 0) return <EmptyState icon={Search} title="Nessuna voce indicizzata" text="Vai in Dati e premi Genera embedding" action={{label: 'Vai a Dati', onClick: onGoData}} />;
+    if (validRecords.length === 0) return <EmptyState icon={Search} title={t('noIndexedVoices')} text={t('noIndexedSub')} action={{label: t('goToData'), onClick: onGoData}} />;
 
     return (
         <div className="space-y-6">
             <div className="flex gap-2">
-                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Cerca..." className="flex-1 px-4 py-2 rounded-lg border border-stone-300" />
-                <Button onClick={handleSearch} loading={loading} icon={Search} aria-label="Cerca">Cerca</Button>
+                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder={t('searchPlaceholder')} className="flex-1 px-4 py-2 rounded-lg border border-stone-300" />
+                <Button onClick={handleSearch} loading={loading} icon={Search} aria-label={t('searchBtn')}>{t('searchBtn')}</Button>
             </div>
             
             <div className="flex gap-4">
                 <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-1.5 rounded-lg border border-stone-300">
-                    <option value="">Tutti i tipi</option>
+                    <option value="">{t('allTypes')}</option>
                     {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-1.5 rounded-lg border border-stone-300">
-                    <option value="">Tutti i tag</option>
+                    <option value="">{t('allTags')}</option>
                     {allTags.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
             </div>
 
             {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
 
-            {results !== null && results.length === 0 && <p className="text-stone-500">Nessun risultato trovato.</p>}
+            {results !== null && results.length === 0 && <p className="text-stone-500">{t('noResults')}</p>}
 
             {displayedResults && (
                 <div className="space-y-4">
@@ -149,17 +151,17 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
                                     {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-xs">{t}</span>)}
                                 </div>
                                 <div className="w-full bg-stone-100 h-1.5 rounded-full mb-2">
-                                    <div className="bg-emerald-600 h-1.5 rounded-full" style={{width: `${Math.min(100, (res.score / topScore) * 100)}%`}} title={`${(res.score * 100).toFixed(2)}% similarità coseno`} />
+                                    <div className="bg-emerald-600 h-1.5 rounded-full" style={{width: `${Math.min(100, (res.score / topScore) * 100)}%`}} title={`${(res.score * 100).toFixed(2)}% ${t('cosineSimilarity')}`} />
                                 </div>
                                 <p className="text-stone-600 line-clamp-3 text-sm">{snippet}</p>
                             </div>
                         );
                     })}
-                    {results && results.length > topN && <Button onClick={() => setTopN(topN + 10)} variant="secondary">Mostra altri 10</Button>}
+                    {results && results.length > topN && <Button onClick={() => setTopN(topN + 10)} variant="secondary">{t('showMore10')}</Button>}
                 </div>
             )}
             
-            <p className="text-xs text-stone-400 mt-8">Strumento di consultazione, non sostituisce un parere medico.</p>
+            <p className="text-xs text-stone-400 mt-8">{t('disclaimerConsultation')}</p>
         </div>
     );
 };

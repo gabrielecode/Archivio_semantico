@@ -1,0 +1,1 @@
+export const GOOGLE_CLIENT_ID = 'INCOLLA_QUI_IL_CLIENT_ID';

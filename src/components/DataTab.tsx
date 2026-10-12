@@ -3,6 +3,7 @@ import {Archive, Rec} from '../types';
 import {Button, Badge, Field, inputCls} from './ui';
 import {Plus, ChevronLeft, Save, Trash2, Copy, Table as TableIcon, FileText, ChevronRight, SkipBack, SkipForward, ArrowLeft, ArrowRight, Search} from 'lucide-react';
 import {needsEmbedding} from '../utils/embed';
+import {useTranslation} from '../utils/i18n';
 
 export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog}: {
   archive: Archive, 
@@ -13,6 +14,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   setSelectedId: (id: string | null) => void,
   setConfirmDialog: (dialog: any) => void
 }) {
+  const {t, lang} = useTranslation();
   const [view, setView] = useState<'Modulo' | 'Tabella'>('Modulo');
   const [searchTerm, setSearchTerm] = useState('');
   const [draft, setDraft] = useState<Rec | null>(null);
@@ -88,8 +90,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleNavigate = (direction: number) => {
     if (isDirty) {
         setConfirmDialog({
-            title: 'Modifiche non salvate',
-            message: 'Hai delle modifiche non salvate. Salvarle prima di navigare?',
+            title: t('unsavedChanges'),
+            message: t('unsavedChangesMsg'),
             onConfirm: () => { handleSave(); setConfirmDialog(null); navigate(direction); },
             onCancel: () => { setConfirmDialog(null); navigate(direction); }
         });
@@ -106,8 +108,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleNuovo = () => {
     if (isDirty) {
         setConfirmDialog({
-            title: 'Modifiche non salvate',
-            message: 'Hai delle modifiche non salvate. Vuoi scartarle e creare un nuovo record?',
+            title: t('unsavedChanges'),
+            message: t('discardAndNewMsg'),
             onConfirm: () => { setConfirmDialog(null); createNew(); },
             onCancel: () => setConfirmDialog(null)
         });
@@ -119,8 +121,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleViewChange = (newView: 'Modulo' | 'Tabella') => {
     if (isDirty) {
         setConfirmDialog({
-            title: 'Modifiche non salvate',
-            message: 'Hai delle modifiche non salvate. Salvarle prima di cambiare vista?',
+            title: t('unsavedChanges'),
+            message: t('unsavedChangesMsg'),
             onConfirm: () => { handleSave(); setConfirmDialog(null); setView(newView); },
             onCancel: () => { setConfirmDialog(null); setView(newView); }
         });
@@ -135,15 +137,15 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
   const handleDuplicate = () => {
     if (!draft) return;
-    const newRec: Rec = {...draft, id: crypto.randomUUID(), titolo: `${draft.titolo} (copia)`, creato: new Date().toISOString(), modificato: new Date().toISOString()};
+    const newRec: Rec = {...draft, id: crypto.randomUUID(), titolo: `${draft.titolo} (${lang === 'de' ? 'Kopie' : 'copia'})`, creato: new Date().toISOString(), modificato: new Date().toISOString()};
     setArchive(a => ({...a, records: [...a.records, newRec]}));
     setSelectedId(newRec.id);
   };
 
   const handleDelete = () => {
     setConfirmDialog({
-        title: 'Eliminare il record?',
-        message: 'Sei sicuro di voler eliminare questo record? Non è possibile annullare.',
+        title: t('deleteRecordTitle'),
+        message: t('deleteRecordMsg'),
         onConfirm: () => { 
             setArchive(a => ({...a, records: a.records.filter(r => r.id !== selectedId)}));
             setConfirmDialog(null);
@@ -168,43 +170,42 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                     <Button variant="ghost" onClick={() => handleNavigate(1)} disabled={currentIndex >= filteredRecords.length - 1}><SkipForward size={16}/></Button>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="ghost" onClick={handleNuovo}><Plus size={16}/>Nuovo</Button>
-                    <Button variant="ghost" onClick={handleDuplicate}><Copy size={16}/>Duplica</Button>
-                    <Button variant="ghost" onClick={handleDelete} className="text-red-600"><Trash2 size={16}/>Elimina</Button>
-                    <Button variant="primary" onClick={handleSave} disabled={!isDirty}><Save size={16}/>Salva</Button>
+                    <Button variant="ghost" onClick={handleNuovo}><Plus size={16}/>{t('newBtn')}</Button>
+                    <Button variant="ghost" onClick={handleDuplicate}><Copy size={16}/>{t('duplicateBtn')}</Button>
+                    <Button variant="ghost" onClick={handleDelete} className="text-red-600"><Trash2 size={16}/>{t('deleteBtn')}</Button>
+                    <Button variant="primary" onClick={handleSave} disabled={!isDirty}><Save size={16}/>{t('saveBtn')}</Button>
                 </div>
                 <div className="flex bg-stone-200 rounded-lg p-1">
-                    <Button variant={view === 'Modulo' ? 'primary' : 'ghost'} onClick={() => handleViewChange('Modulo')}><FileText size={16}/></Button>
-                    <Button variant={view === 'Tabella' ? 'primary' : 'ghost'} onClick={() => handleViewChange('Tabella')}><TableIcon size={16}/></Button>
+                    <Button variant={view === 'Modulo' ? 'primary' : 'ghost'} onClick={() => handleViewChange('Modulo')} title={t('viewModule')}><FileText size={16}/></Button>
+                    <Button variant={view === 'Tabella' ? 'primary' : 'ghost'} onClick={() => handleViewChange('Tabella')} title={t('viewTable')}><TableIcon size={16}/></Button>
                 </div>
             </div>
 
             <div className="flex items-center gap-2 text-sm">
-                <input placeholder="Cerca..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={inputCls} />
-                <Button variant="ghost" onClick={() => setSearchTerm('')}>Mostra tutti</Button>
-                <span>{filteredRecords.length} di {archive.records.length} voci</span>
+                <input placeholder={t('searchFilter')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={inputCls} />
+                <Button variant="ghost" onClick={() => setSearchTerm('')}>{t('showAll')}</Button>
+                <span>{filteredRecords.length} {t('recordsOf')} {archive.records.length}</span>
             </div>
         </div>
 
         {view === 'Modulo' ? (
             <div className="bg-white p-6 border rounded-lg shadow-sm space-y-4">
                 {/* Form fields */}
-                <Field label="Titolo*">
+                <Field label={t('titleLabel')}>
                     <input value={draft.titolo} onChange={e => setDraft({...draft, titolo: e.target.value})} className={inputCls} />
                 </Field>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Tipo">
+                    <Field label={t('typeLabel')}>
                         <select value={draft.tipo} onChange={e => setDraft({...draft, tipo: e.target.value})} className={inputCls}>
                             {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                     </Field>
-                    <Field label="Fonte">
+                    <Field label={t('sourceLabel')}>
                         <input value={draft.fonte} onChange={e => setDraft({...draft, fonte: e.target.value})} className={inputCls} />
                     </Field>
                 </div>
-                <Field label="Tags">
-                    {/* Simplified for now, just input */}
-                    <input value={draft.tags.join(', ')} onChange={e => setDraft({...draft, tags: e.target.value.split(',').map(t => t.trim())})} className={inputCls} placeholder="tag1, tag2..." />
+                <Field label={t('tagsLabel')}>
+                    <input value={draft.tags.join(', ')} onChange={e => setDraft({...draft, tags: e.target.value.split(',').map(t => t.trim())})} className={inputCls} placeholder={t('tagsPlaceholder')} />
                 </Field>
                 {archive.schema.campi.map(campo => (
                     <Field key={campo.chiave} label={campo.etichetta}>
@@ -215,10 +216,10 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                         )}
                     </Field>
                 ))}
-                <Field label="Contenuto">
+                <Field label={t('contentLabel')}>
                     <textarea value={draft.contenuto} onChange={e => setDraft({...draft, contenuto: e.target.value})} className={`${inputCls} min-h-[360px]`} />
                     <div className="text-xs text-stone-500 mt-1">
-                        {draft.contenuto.length} caratteri - {Math.ceil(draft.contenuto.length / 1700)} blocchi stimati
+                        {draft.contenuto.length} {t('chars')} - {Math.ceil(draft.contenuto.length / 1700)} {t('estimatedBlocks')}
                     </div>
                 </Field>
             </div>
@@ -227,10 +228,10 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                 <table className="w-full text-sm text-left">
                     <thead className="bg-stone-100">
                         <tr>
-                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('titolo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>Titolo</th>
-                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('tipo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>Tipo</th>
-                            <th className="p-2">Tags</th>
-                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('modificato'); setSortDir(sortDir==='asc'?'desc':'asc')}}>Modificato</th>
+                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('titolo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('titleLabel').replace('*', '')}</th>
+                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('tipo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('typeLabel')}</th>
+                            <th className="p-2">{t('tagsLabel')}</th>
+                            <th className="p-2 cursor-pointer" onClick={() => {setSortField('modificato'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{lang === 'de' ? 'Geändert' : 'Modificato'}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -239,7 +240,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                                 <td className="p-2 font-medium">{r.titolo}</td>
                                 <td className="p-2"><Badge type={r.tipo} /></td>
                                 <td className="p-2">{r.tags.join(', ')}</td>
-                                <td className="p-2">{new Date(r.modificato).toLocaleDateString()}</td>
+                                <td className="p-2">{new Date(r.modificato).toLocaleDateString(lang === 'de' ? 'de-DE' : 'it-IT')}</td>
                             </tr>
                         ))}
                     </tbody>
