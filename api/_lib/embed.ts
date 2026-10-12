@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { requireAuth } from './auth.js';
+import { requireAuth, getAuthStatus } from './auth.js';
 
 // Minimal structural types for req/res to support Express and Vercel
 type RequestLike = {
@@ -39,11 +39,11 @@ setInterval(() => {
 }, 60000).unref();
 
 export const healthHandler = (req: RequestLike, res: ResponseLike) => {
-    res.status(200).json({ ok: true, embed: !!process.env.GEMINI_API_KEY });
+    res.status(200).json(getAuthStatus());
 };
 
 export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
-    const userId = requireAuth(req, res);
+    const userId = await requireAuth(req, res);
     if (!userId) return;
 
     const { texts, mode } = req.body;

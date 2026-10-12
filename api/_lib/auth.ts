@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import { getKv, kvMode } from './kv.js';
+import { getUser, envUsers, verifyPassword, hashPassword, dummyScrypt } from './users.js';
 
 type RequestLike = {
     headers: Record<string, any>;
@@ -9,84 +11,80 @@ type ResponseLike = {
     setHeader: (name: string, value: string) => void;
 };
 
-let usersCache: { id: string; name: string; hash: string }[] | null = null;
+export { verifyPassword, hashPassword, dummyScrypt };
 
-export const getUsers = () => {
-    if (usersCache) return usersCache;
-    try {
-        const users = JSON.parse(process.env.USERS || '[]');
-        if (!Array.isArray(users)) throw new Error();
-        const validUsers = users.filter((u: any) => typeof u.id === 'string' && /^[a-z0-9_-]{1,32}$/.test(u.id) && typeof u.name === 'string' && typeof u.hash === 'string');
-        const ids = new Set<string>();
-        usersCache = validUsers.filter((u: { id: string }) => {
-            if (ids.has(u.id)) return false;
-            ids.add(u.id);
-            return true;
-        });
-        return usersCache;
-    } catch {
-        return [];
-    }
-};
-
-const getSecret = () => process.env.AUTH_SECRET;
-
-export const verifyPassword = (pw: string, stored: string) => {
-    const parts = stored.split('$');
-    if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
-    const salt = Buffer.from(parts[1], 'base64');
-    const hash = Buffer.from(parts[2], 'base64');
-    const derived = crypto.scryptSync(pw, salt, 32, { N: 16384, r: 8, p: 1 });
-    return crypto.timingSafeEqual(derived, hash);
-};
-
-export const dummyScrypt = () => {
-    crypto.scryptSync('dummy', Buffer.alloc(16), 32, { N: 16384, r: 8, p: 1 });
-};
+export const getSecret = () => process.env.AUTH_SECRET;
 
 export const signSession = (userId: string) => {
     const secret = getSecret();
     if (!secret) return null;
     const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
-    const payload = Buffer.from(JSON.stringify({ u: userId, exp })).toString('base64url');
+    const iat = Date.now();
+    const payload = Buffer.from(JSON.stringify({ u: userId, iat, exp })).toString('base64url');
     const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
     return `${payload}.${signature}`;
 };
 
-export const verifySession = (token: string) => {
+export const verifySession = async (token: string): Promise<string | null> => {
     const secret = getSecret();
     if (!secret) return null;
-    const [payload, signature] = token.split('.');
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payload, signature] = parts;
     if (!payload || !signature) return null;
-    const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return null;
     try {
-        const { u, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString());
-        if (exp < Date.now()) return null;
-        if (!getUsers().some(uObj => uObj.id === u)) return null;
-        return u;
+        const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+        if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return null;
+        const { u, iat, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+        if (!exp || exp < Date.now()) return null;
+        const user = await getUser(u);
+        if (!user) return null;
+        if (user.sessionsValidFrom && iat && iat < user.sessionsValidFrom) return null;
+        return user.id;
     } catch {
         return null;
     }
 };
 
-const loginThrottle = new Map<string, { count: number; resetTime: number }>();
+const inMemThrottle = new Map<string, { count: number; resetTime: number }>();
 
-export const checkThrottle = (ip: string) => {
+export const throttle = async (key: string, max: number, windowSec: number): Promise<{ allowed: boolean; retryAfterSec: number }> => {
+    const kv = getKv();
+    if (kvMode() !== 'none' && kv) {
+        const kvKey = `thr:${key}`;
+        try {
+            const count = await kv.incr(kvKey, windowSec);
+            if (count > max) {
+                return { allowed: false, retryAfterSec: windowSec };
+            }
+            return { allowed: true, retryAfterSec: 0 };
+        } catch {
+            // fallback to in-memory
+        }
+    }
+
     const now = Date.now();
-    const data = loginThrottle.get(ip) || { count: 0, resetTime: now + 10 * 60 * 1000 };
-    if (data.resetTime < now) { data.count = 0; data.resetTime = now + 10 * 60 * 1000; }
-    return data;
+    let data = inMemThrottle.get(key);
+    if (!data || data.resetTime < now) {
+        data = { count: 0, resetTime: now + windowSec * 1000 };
+        inMemThrottle.set(key, data);
+    }
+    data.count++;
+    if (data.count > max) {
+        const retryAfterSec = Math.ceil((data.resetTime - now) / 1000);
+        return { allowed: false, retryAfterSec: retryAfterSec > 0 ? retryAfterSec : windowSec };
+    }
+    return { allowed: true, retryAfterSec: 0 };
 };
 
-export const requireAuth = (req: RequestLike, res: ResponseLike) => {
+export const requireAuth = async (req: RequestLike, res: ResponseLike): Promise<string | null> => {
     const cookieHeader = req.headers['cookie'];
-    const token = cookieHeader?.split('; ').find((c: string) => c.startsWith('tcm_session='))?.split('=')[1];
+    const token = cookieHeader?.split('; ').find((c: string) => c.trim().startsWith('tcm_session='))?.split('=')[1];
     if (!token) {
         res.status(401).json({ error: 'Unauthorized' });
         return null;
     }
-    const userId = verifySession(token);
+    const userId = await verifySession(token);
     if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
         return null;
@@ -100,4 +98,17 @@ export const setCookie = (res: ResponseLike, token: string, secure: boolean) => 
 
 export const clearCookie = (res: ResponseLike) => {
     res.setHeader('Set-Cookie', 'tcm_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
+};
+
+export const getAuthStatus = () => {
+    const secretOk = !!process.env.AUTH_SECRET;
+    const geminiOk = !!process.env.GEMINI_API_KEY;
+    const registration = !!process.env.INVITE_CODE && kvMode() !== 'none';
+    return {
+        users: envUsers().length,
+        store: kvMode(),
+        auth: secretOk,
+        embed: geminiOk,
+        registration
+    };
 };

@@ -2,17 +2,20 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, User as UserIcon, Shield} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
 import {EmbedBar} from './components/EmbedBar';
 import {ArchivePicker} from './components/ArchivePicker';
 import GuideContent from './components/GuideContent';
+import AccountDialog from './components/AccountDialog';
+import UsersAdmin from './components/UsersAdmin';
 import {calculateEmbHash} from './utils/chunk';
 import {openStore, Store, subscribe} from './utils/store';
 
-export default function App({user, onLogout}: {user: {id: string, name: string}, onLogout: () => void}) {
+export default function App({user, onLogout}: {user: {id: string, name: string, role?: string}, onLogout: () => void}) {
+    const [currentUser, setCurrentUser] = useState(user);
     const [tab, setTab] = useState<'ricerca' | 'dati' | 'struttura'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
     const [archiveId, setArchiveId] = useState<string | null>(null);
@@ -23,6 +26,8 @@ export default function App({user, onLogout}: {user: {id: string, name: string},
     const [conflict, setConflict] = useState(false);
     const [showArchivePicker, setShowArchivePicker] = useState(false);
     const [showGuideModal, setShowGuideModal] = useState(false);
+    const [showAccountModal, setShowAccountModal] = useState(false);
+    const [showUsersAdminModal, setShowUsersAdminModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const storeRef = useRef<Store | null>(null);
@@ -126,7 +131,12 @@ export default function App({user, onLogout}: {user: {id: string, name: string},
                     <div className="flex items-center gap-2 sm:hidden relative" ref={menuRef}>
                         <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} aria-label="Menu"><Menu size={16} /></Button>
                         {showMenu && (
-                            <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[200px] z-25">
+                            <div className="absolute right-0 top-full mt-2 bg-white border rounded-lg shadow-lg py-2 min-w-[220px] z-25 text-stone-900">
+                                <div className="px-4 py-2 border-b border-stone-100 font-semibold text-sm text-stone-700 truncate">{currentUser.name}</div>
+                                <Button variant="ghost" className="w-full justify-start text-stone-800" onClick={() => {setShowAccountModal(true); setShowMenu(false);}}><UserIcon size={16} />Il mio account</Button>
+                                {currentUser.role === 'admin' && (
+                                    <Button variant="ghost" className="w-full justify-start text-stone-800" onClick={() => {setShowUsersAdminModal(true); setShowMenu(false);}}><Shield size={16} />Gestione utenti</Button>
+                                )}
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>Archivi</Button>
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); setShowMenu(false); }}>Nuovo</Button>
                                 <Button variant="ghost" className="w-full justify-start" onClick={() => {exportArchiveJson(archive); setShowMenu(false);}}>Esporta JSON</Button>
@@ -140,7 +150,29 @@ export default function App({user, onLogout}: {user: {id: string, name: string},
                         <Button variant="ghost" onClick={() => { const a = newArchive('Nuovo'); const id = crypto.randomUUID(); flush(); setArchive(a); setArchiveId(id); archiveRef.current=a; setDirty(true); }}>Nuovo</Button>
                         <Button variant="ghost" onClick={() => exportArchiveJson(archive)}>Esporta JSON</Button>
                         <Button variant="ghost" aria-label="Guida" onClick={() => setShowGuideModal(true)}><HelpCircle size={16} /></Button>
-                        <Button variant="ghost" onClick={handleLogout}><LogOut size={16} /></Button>
+                        
+                        <div className="relative ml-2 pl-2 border-l border-stone-200">
+                            <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">
+                                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <span className="font-medium text-stone-800 truncate max-w-[120px]">{currentUser.name}</span>
+                            </Button>
+                            {showMenu && (
+                                <div className="absolute right-0 top-full mt-2 bg-white border rounded-xl shadow-xl py-2 min-w-[220px] z-25 text-stone-900">
+                                    <div className="px-4 py-2 border-b border-stone-100">
+                                        <p className="font-semibold text-sm text-stone-900">{currentUser.name}</p>
+                                        <p className="text-xs text-stone-500 font-mono">{currentUser.id}</p>
+                                    </div>
+                                    <Button variant="ghost" className="w-full justify-start text-stone-800 py-2.5" onClick={() => {setShowAccountModal(true); setShowMenu(false);}}><UserIcon size={16} />Il mio account</Button>
+                                    {currentUser.role === 'admin' && (
+                                        <Button variant="ghost" className="w-full justify-start text-stone-800 py-2.5" onClick={() => {setShowUsersAdminModal(true); setShowMenu(false);}}><Shield size={16} />Gestione utenti</Button>
+                                    )}
+                                    <div className="border-t border-stone-100 my-1"></div>
+                                    <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} />Esci</Button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm py-1">
@@ -148,7 +180,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string},
                     <div>{new Date(archive.modificato).toLocaleString('it-IT')}</div>
                 </div>
                 {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
-                <EmbedBar archive={archive} user={user} onNeedLogin={() => {}} onApply={results => {
+                <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={results => {
                     updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
                 }} toast={(msg, type) => setToast({message: msg, type})} />
             </header>
@@ -172,6 +204,23 @@ export default function App({user, onLogout}: {user: {id: string, name: string},
                 <Modal title="Guida all'uso" onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
                     <GuideContent />
                 </Modal>
+            )}
+
+            {showAccountModal && (
+                <AccountDialog
+                    user={currentUser}
+                    onClose={() => setShowAccountModal(false)}
+                    onUpdateUser={u => { setCurrentUser(u); setShowAccountModal(false); }}
+                    toast={(msg, type) => setToast({message: msg, type})}
+                />
+            )}
+
+            {showUsersAdminModal && (
+                <UsersAdmin
+                    currentUserId={currentUser.id}
+                    onClose={() => setShowUsersAdminModal(false)}
+                    toast={(msg, type) => setToast({message: msg, type})}
+                />
             )}
         </div>
     );

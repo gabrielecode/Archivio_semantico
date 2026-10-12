@@ -115,10 +115,17 @@ export default function GuideContent() {
                 <div className="space-y-4">
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
+                            <span>Come cambio la mia password?</span>
+                            <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <p className="mt-4 text-stone-600 pt-3 border-t">Clicca sul tuo nome utente in alto a destra nella barra superiore e seleziona &apos;Il mio account&apos;. Da lì potrai inserire la password attuale e impostare una nuova password (minimo 8 caratteri).</p>
+                    </details>
+                    <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
+                        <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
                             <span>Ho dimenticato la password.</span>
                             <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
                         </summary>
-                        <p className="mt-4 text-stone-600 pt-3 border-t">Contatta la persona che gestisce il programma: potrà darti una nuova password.</p>
+                        <p className="mt-4 text-stone-600 pt-3 border-t">Contatta l&apos;amministratore del sistema, che potrà reimpostare la tua password direttamente dal pannello &apos;Gestione utenti&apos;.</p>
                     </details>
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">

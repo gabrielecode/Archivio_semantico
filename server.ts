@@ -8,6 +8,9 @@ import loginHandler from './api/login.js';
 import logoutHandler from './api/logout.js';
 import meHandler from './api/me.js';
 
+import accountHandler from './api/account.js';
+import usersHandler from './api/users.js';
+
 dotenv.config({ path: ['.env.local', '.env'] });
 
 const app = express();
@@ -21,6 +24,8 @@ app.post('/api/embed', embedHandler);
 app.post('/api/login', loginHandler);
 app.post('/api/logout', logoutHandler);
 app.get('/api/me', meHandler);
+app.all('/api/account', accountHandler);
+app.all('/api/users', usersHandler);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
