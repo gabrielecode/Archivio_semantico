@@ -1,4 +1,5 @@
 import {Archive} from '../types';
+import {upgradeArchiveIfNeeded} from './archive';
 
 const TAB_ID = crypto.randomUUID();
 
@@ -33,7 +34,19 @@ export const openStore = async (userId: string): Promise<Store> => {
                 }),
                 get: (id: string) => new Promise(res => {
                     const req = db.transaction('archives', 'readonly').objectStore('archives').get(id);
-                    req.onsuccess = () => res(req.result ? req.result.data : null);
+                    req.onsuccess = async () => {
+                        if (!req.result) return res(null);
+                        const archive = req.result.data as Archive;
+                        if (upgradeArchiveIfNeeded(archive)) {
+                            const tx = db.transaction(['archives', 'index'], 'readwrite');
+                            tx.objectStore('archives').put({id, data: archive});
+                            tx.objectStore('index').put({id, nome: archive.nome, modificato: archive.modificato, count: archive.records.length});
+                            tx.oncomplete = () => {
+                                channel.postMessage({id, modificato: archive.modificato, tab: TAB_ID});
+                            };
+                        }
+                        res(archive);
+                    };
                 }),
                 put: (id: string, archive: Archive) => new Promise((res, rej) => {
                     const tx = db.transaction(['archives', 'index'], 'readwrite');

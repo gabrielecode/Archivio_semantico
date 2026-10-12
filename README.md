@@ -6,7 +6,8 @@ Strumento di ricerca semantica per dati TCM (Medicina Tradizionale Cinese). Perm
 ## Avvio
 1. `npm install`
 2. Configurare `.env.local` con:
-   - `GEMINI_API_KEY=...`
+   - `OPENROUTER_API_KEY=...`
+   - `OPENROUTER_EMBED_MODEL=...` (opzionale)
    - `AUTH_SECRET=...` (stringa casuale sicura per i cookie firmati HMAC)
    - `USERS='[{"id":"admin","name":"Amministratore","hash":"scrypt$...","role":"admin"}]'`
    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (richiesto su Vercel per modificare accessi e password dall'app)
@@ -21,7 +22,7 @@ Strumento di ricerca semantica per dati TCM (Medicina Tradizionale Cinese). Perm
 ## Come si usa
 1. **Struttura**: Definire tipi e campi nel pannello apposito.
 2. **Dati**: Creare nuove voci o importarle.
-3. **Genera embedding**: Utilizzare la barra di embedding (richiede `GEMINI_API_KEY` configurata).
+3. **Genera embedding**: Utilizzare la barra di embedding (richiede `OPENROUTER_API_KEY` configurata).
 4. **Ricerca**: Utilizzare la barra di ricerca semantica.
 5. **Salva / Esporta JSON**: Esportare o sincronizzare i dati.
 
@@ -29,8 +30,7 @@ Strumento di ricerca semantica per dati TCM (Medicina Tradizionale Cinese). Perm
 - Autenticazione basata su cookie firmati HMAC (`tcm_session`).
 - Storage persistente degli utenti in KV (Upstash Redis) con priorità rispetto alle variabili d'ambiente.
 - Rate limiting su login e modifiche account.
-- Chiave API Gemini protetta sul server.
+- Chiave API OpenRouter protetta sul server.
 
 ## Limiti
 - Strumento di consultazione, non sostituisce un parere medico.
-

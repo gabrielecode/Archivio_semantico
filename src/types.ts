@@ -1,5 +1,5 @@
-export const EMB_MODEL = 'gemini-embedding-2-preview';
-export const EMB_DIM = 768;
+export const EMB_MODEL = 'openai/text-embedding-3-small';
+export const EMB_DIM = 1536;
 export const ARCHIVE_VERSION = 2;
 
 export interface Rec {

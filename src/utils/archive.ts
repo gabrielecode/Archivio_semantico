@@ -25,44 +25,46 @@ export function newArchive(nome: string): Archive {
   };
 }
 
+export function upgradeArchiveIfNeeded(archive: Archive): boolean {
+    if (archive.model !== EMB_MODEL || archive.dim !== EMB_DIM) {
+        archive.model = EMB_MODEL;
+        archive.dim = EMB_DIM;
+        archive.records.forEach(r => {
+            r.chunks = [];
+            r.embHash = '';
+        });
+        (archive as any).__upgraded = true;
+        return true;
+    }
+    return false;
+}
+
 export function parseArchive(json: any): Archive {
     if (typeof json !== 'object' || json === null) throw new Error('File JSON non valido');
     
     const base = newArchive('Imported');
     const records = Array.isArray(json) ? json.map(r => normalizeRecord(r)) : (json.records || []).map((r: any) => normalizeRecord(r));
 
-    const modelChanged = json.model !== base.model || json.dim !== base.dim;
-
-    const normalizedRecords = records.map((r: Rec) => {
-        if (modelChanged) {
-            r.chunks = [];
-            r.embHash = '';
-        } else {
-            r.chunks = r.chunks.filter(c => typeof c.testo === 'string' && Array.isArray(c.embedding) && c.embedding.every(v => Number.isFinite(v)));
-            if (r.chunks.length === 0) r.embHash = '';
-        }
-        return r;
-    });
-
-    const campi = (json.schema?.campi || []).filter((c: any) => c.chiave && c.etichetta);
-    const campiMap = new Map();
-    campi.forEach((c: any) => campiMap.set(c.chiave, c));
-
-    const schema = {
-        campi: Array.from(campiMap.values()),
-        tipi: Array.from(new Set([...base.schema.tipi, ...json.schema?.tipi || [], ...normalizedRecords.map((r: Rec) => r.tipo)]))
-    };
-
-    return {
+    const archive: Archive = {
         version: ARCHIVE_VERSION,
         nome: typeof json.nome === 'string' ? json.nome : 'Imported',
         creato: isValidISO(json.creato) ? json.creato : new Date().toISOString(),
         modificato: isValidISO(json.modificato) ? json.modificato : new Date().toISOString(),
         model: json.model || base.model,
         dim: typeof json.dim === 'number' ? json.dim : base.dim,
-        schema,
-        records: normalizedRecords
+        schema: {
+            campi: (json.schema?.campi || []).filter((c: any) => c.chiave && c.etichetta),
+            tipi: Array.from(new Set([...base.schema.tipi, ...json.schema?.tipi || [], ...records.map((r: Rec) => r.tipo)]))
+        },
+        records: records.map((r: Rec) => {
+            r.chunks = r.chunks.filter(c => typeof c.testo === 'string' && Array.isArray(c.embedding) && c.embedding.every(v => Number.isFinite(v)));
+            if (r.chunks.length === 0) r.embHash = '';
+            return r;
+        })
     };
+
+    upgradeArchiveIfNeeded(archive);
+    return archive;
 }
 
 function isValidISO(date: any) {

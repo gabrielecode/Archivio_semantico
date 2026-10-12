@@ -52,7 +52,10 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                     }
                 }
                 const a = await store.get(lastId!);
-                if (a) { setArchive(a); setArchiveId(lastId); archiveRef.current = a; }
+                if (a) { 
+                    if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'});
+                    setArchive(a); setArchiveId(lastId); archiveRef.current = a; 
+                }
                 setLoading(false);
             } catch (e: any) { setSaveError(e.message); setLoading(false); }
         })();
@@ -159,7 +162,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                     <div className={saveState==='error'?'text-red-600':''}>{saveState==='saving'?'Salvataggio...':saveState==='saved'?'Salvato in locale':saveState==='error'?`Errore: ${saveError}`:''} {saveState==='error' && <Button size="sm" variant="ghost" onClick={flush}>Riprova</Button>}</div>
                     <div>{new Date(archive.modificato).toLocaleString('it-IT')}</div>
                 </div>
-                {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
+                {conflict && <div className="bg-amber-100 border-b border-amber-300 p-2 text-center text-sm">Questo archivio è stato modificato in un'altra scheda.<Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>Ricarica</Button><Button variant="ghost" size="sm" onClick={() => setConflict(false)}>Sovrascrivi</Button></div>}
                 <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={(results: any) => {
                     updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
                 }} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />
@@ -178,7 +181,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {confirmDialog && <ConfirmDialog {...confirmDialog} />}
-            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
+            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare: premi Genera embedding', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
             
             {showGuideModal && (
                 <Modal title="Guida all'uso" onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">

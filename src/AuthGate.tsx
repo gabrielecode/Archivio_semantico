@@ -341,7 +341,7 @@ export default function AuthGate() {
             </div>
 
             <div className="max-w-md w-full mt-6 p-4 bg-stone-200/60 rounded-xl text-stone-700 text-xs leading-relaxed text-center">
-                I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a Google Gemini per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (email e nome) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
+                I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a un servizio di intelligenza artificiale (OpenRouter e il fornitore del modello) per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (email e nome) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
             </div>
         </div>
     );

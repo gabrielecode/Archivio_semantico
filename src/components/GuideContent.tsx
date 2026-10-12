@@ -98,7 +98,7 @@ export default function GuideContent() {
                 <h2 className="text-3xl font-serif font-semibold text-stone-900 border-b pb-3">Dove finiscono le mie schede? (importante)</h2>
                 <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl space-y-4 text-amber-900">
                     <p className="font-medium text-xl">
-                        I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a Google Gemini per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (nome, email, stato) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
+                        I tuoi archivi restano salvati solo nel tuo browser. Quando cerchi o generi gli embedding, i testi vengono inviati a un servizio di intelligenza artificiale (OpenRouter e il fornitore del modello) per il calcolo e non vengono salvati sul nostro server. L'amministratore gestisce solo gli account (nome, email, stato) e non può vedere i tuoi dati. Esporta spesso un backup JSON: se cambi dispositivo o browser, importalo.
                     </p>
                     <ul className="space-y-3 pt-2 text-stone-800 list-disc list-inside">
                         <li>Se usi un altro computer o un altro browser, non le troverai.</li>
@@ -125,7 +125,7 @@ export default function GuideContent() {
                             <span>Altri possono leggere le mie schede?</span>
                             <span className="text-emerald-700 group-open:rotate-180 transition-transform">▼</span>
                         </summary>
-                        <p className="mt-4 text-stone-600 pt-3 border-t">No. Le schede restano sul tuo computer. Per capire il significato dei testi, il programma invia temporaneamente le frasi a un servizio di intelligenza artificiale (Google Gemini) e non le conserva sul sito.</p>
+                        <p className="mt-4 text-stone-600 pt-3 border-t">No. Le schede restano sul tuo computer. Per capire il significato dei testi, il programma invia temporaneamente le frasi a un servizio di intelligenza artificiale (OpenRouter e il fornitore del modello) e non le conserva sul sito.</p>
                     </details>
                     <details className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm group">
                         <summary className="font-semibold text-xl text-stone-900 cursor-pointer list-none flex justify-between items-center">
