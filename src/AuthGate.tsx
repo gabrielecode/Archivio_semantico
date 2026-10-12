@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from './lib/firebase';
 import { Button, Modal } from './components/ui';
-import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle, Globe, Cloud } from 'lucide-react';
+import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle, Globe, Cloud, Eye, EyeOff } from 'lucide-react';
 import App from './App';
 import GuideContent from './components/GuideContent';
 import { useTranslation } from './utils/i18n';
@@ -28,6 +28,7 @@ export default function AuthGate() {
     const [infoMsg, setInfoMsg] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -217,7 +218,6 @@ export default function AuthGate() {
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900 font-sans antialiased flex flex-col justify-between">
             <div>
-                {/* Header */}
                 <header className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-stone-200 z-40">
                     <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -248,9 +248,7 @@ export default function AuthGate() {
                     </div>
                 </header>
 
-                {/* Main Landing / Instructions */}
                 <main className="max-w-6xl mx-auto px-4 py-12 space-y-16">
-                    {/* Hero Section */}
                     <section className="py-12 lg:py-16 grid lg:grid-cols-2 gap-12 items-center">
                         <div className="space-y-8">
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-stone-900 leading-tight">
@@ -308,14 +306,12 @@ export default function AuthGate() {
                         </div>
                     </section>
 
-                    {/* Guide & Instructions Component */}
-                    <div className="bg-white p-6 sm:p-12 rounded-3xl border border-stone-200 shadow-sm">
+                    <div id="come-funziona" className="bg-white p-6 sm:p-12 rounded-3xl border border-stone-200 shadow-sm">
                         <GuideContent />
                     </div>
                 </main>
             </div>
 
-            {/* Footer */}
             <footer className="bg-white border-t border-stone-200 text-center p-8 text-sm text-stone-500 mt-20 space-y-2">
                 <p>{t('disclaimerConsultation')}</p>
                 <p className="text-xs">{t('disclaimerSimilarity')}</p>
@@ -324,7 +320,6 @@ export default function AuthGate() {
                 </p>
             </footer>
 
-            {/* Login / Register / Forgot Modal */}
             {showLoginModal && (
                 <Modal title={
                     mode === 'login' ? t('loginAccountTitle') : 
@@ -363,6 +358,7 @@ export default function AuthGate() {
                                         <input 
                                             type="email" 
                                             required 
+                                            autoComplete="email"
                                             value={email} 
                                             onChange={e => setEmail(e.target.value)}
                                             className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -371,14 +367,25 @@ export default function AuthGate() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-stone-700 mb-1">{t('passwordLabel')}</label>
-                                        <input 
-                                            type="password" 
-                                            required 
-                                            value={password} 
-                                            onChange={e => setPassword(e.target.value)}
-                                            className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                            placeholder="••••••••"
-                                        />
+                                        <div className="relative">
+                                            <input 
+                                                type={showPassword ? 'text' : 'password'} 
+                                                required 
+                                                autoComplete="current-password"
+                                                value={password} 
+                                                onChange={e => setPassword(e.target.value)}
+                                                className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 pr-12"
+                                                placeholder="••••••••"
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 p-1"
+                                                aria-label="Mostra o nascondi password"
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
                                     </div>
                                     <Button type="submit" className="w-full py-3.5 text-base font-semibold bg-emerald-700 hover:bg-emerald-800 text-white" disabled={submitting}>
                                         {t('login')}
@@ -403,6 +410,7 @@ export default function AuthGate() {
                                     <input 
                                         type="email" 
                                         required 
+                                        autoComplete="email"
                                         value={email} 
                                         onChange={e => setEmail(e.target.value)}
                                         className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -411,15 +419,26 @@ export default function AuthGate() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('min8Chars')}</label>
-                                    <input 
-                                        type="password" 
-                                        required 
-                                        minLength={8}
-                                        value={password} 
-                                        onChange={e => setPassword(e.target.value)}
-                                        className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                        placeholder="••••••••"
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type={showPassword ? 'text' : 'password'} 
+                                            required 
+                                            minLength={8}
+                                            autoComplete="new-password"
+                                            value={password} 
+                                            onChange={e => setPassword(e.target.value)}
+                                            className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 pr-12"
+                                            placeholder="••••••••"
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 p-1"
+                                            aria-label="Mostra o nascondi password"
+                                        >
+                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('confirmPasswordLabel')}</label>
@@ -427,6 +446,7 @@ export default function AuthGate() {
                                         type="password" 
                                         required 
                                         minLength={8}
+                                        autoComplete="new-password"
                                         value={confirmPassword} 
                                         onChange={e => setConfirmPassword(e.target.value)}
                                         className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -451,6 +471,7 @@ export default function AuthGate() {
                                     <input 
                                         type="email" 
                                         required 
+                                        autoComplete="email"
                                         value={email} 
                                         onChange={e => setEmail(e.target.value)}
                                         className="w-full px-4 py-3 text-base border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -477,3 +498,4 @@ export default function AuthGate() {
         </div>
     );
 }
+

@@ -1,8 +1,8 @@
 import React, {useState, useRef, useMemo, useEffect} from 'react';
-import {Search} from 'lucide-react';
-import {Archive, Rec, EMB_DIM} from '../types';
+import {Search, History, Sparkles} from 'lucide-react';
+import {Archive, EMB_DIM} from '../types';
 import {fetchEmbeddings} from '../utils/api';
-import {Button, Badge, EmptyState} from './ui';
+import {Button, EmptyState} from './ui';
 import {buildHeader} from '../utils/chunk';
 import {useTranslation} from '../utils/i18n';
 
@@ -32,8 +32,45 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [topN, setTopN] = useState(10);
+    const [recent, setRecent] = useState<string[]>([]);
     const abortController = useRef<AbortController | null>(null);
     const queryCache = useRef<{q: string, vec: number[]} | null>(null);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('tcm_recent_searches');
+            if (saved) setRecent(JSON.parse(saved));
+        } catch {
+            // ignore
+        }
+    }, []);
+
+    const saveRecent = (q: string) => {
+        if (!q.trim()) return;
+        const next = [q, ...recent.filter(x => x !== q)].slice(0, 5);
+        setRecent(next);
+        try {
+            localStorage.setItem('tcm_recent_searches', JSON.stringify(next));
+        } catch {
+            // ignore
+        }
+    };
+
+    const clearRecent = () => {
+        setRecent([]);
+        try {
+            localStorage.removeItem('tcm_recent_searches');
+        } catch {
+            // ignore
+        }
+    };
+
+    const examples = [
+        'Deficienza di Qi di Milza',
+        'Insonnia e calore al cuore',
+        'Dolore lombare e freddo',
+        'Stasi di Qi di Fegato'
+    ];
 
     const allTags = useMemo(() => Array.from(new Set(archive.records.flatMap(r => r.tags))), [archive]);
     const validRecords = useMemo(() => archive.records.filter(r => r.chunks.length > 0), [archive]);
@@ -50,6 +87,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
         if (q.trim().length < 2) return;
         setLoading(true);
         setError(null);
+        saveRecent(q);
 
         if (abortController.current) abortController.current.abort();
         abortController.current = new AbortController();
@@ -92,7 +130,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
             newResults.sort((a, b) => b.score - a.score);
             setResults(newResults);
         } catch (e: unknown) {
-            if (e instanceof Error && e.name !== 'AbortError') setError(t('errorPrefix') + e.message);
+            if (e instanceof Error && e.name !== 'AbortError') setError(t('connectionError'));
         } finally {
             setLoading(false);
         }
@@ -107,33 +145,98 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
     }, [tipo, tag]);
 
     const displayedResults = results?.slice(0, topN);
-    const topScore = displayedResults && displayedResults.length > 0 ? displayedResults[0].score : 1;
+
+    const getRelevanceLabel = (score: number) => {
+        if (score >= 0.75) return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">{t('veryRelevant')}</span>;
+        if (score >= 0.55) return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">{t('relevant')}</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{t('possibleRelevant')}</span>;
+    };
 
     if (validRecords.length === 0) return <EmptyState icon={Search} title={t('noIndexedVoices')} text={t('noIndexedSub')} action={{label: t('goToData'), onClick: onGoData}} />;
 
     return (
-        <div className="space-y-6">
-            <div className="flex gap-2">
-                <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder={t('searchPlaceholder')} className="flex-1 px-4 py-2 rounded-lg border border-stone-300" />
-                <Button onClick={handleSearch} loading={loading} icon={Search} aria-label={t('searchBtn')}>{t('searchBtn')}</Button>
+        <div className="space-y-6 text-stone-900 text-base">
+            <div className="space-y-3">
+                <div className="flex gap-2">
+                    <input 
+                        value={query} 
+                        onChange={e => setQuery(e.target.value)} 
+                        onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+                        placeholder={t('searchPlaceholder')} 
+                        className="flex-1 px-4 py-3 text-base rounded-xl border border-stone-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none min-h-[44px]" 
+                    />
+                    <Button onClick={handleSearch} loading={loading} icon={Search} className="px-6 min-h-[44px] text-base font-semibold">
+                        {t('searchBtn')}
+                    </Button>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
+                        <span className="font-medium flex items-center gap-1"><Sparkles size={14} className="text-emerald-700"/> {t('searchExamples')}</span>
+                        {examples.map(ex => (
+                            <button 
+                                key={ex} 
+                                onClick={() => { setQuery(ex); performSearch(ex); }} 
+                                className="px-3 py-1 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg text-xs font-medium border border-stone-200 transition-colors"
+                            >
+                                {ex}
+                            </button>
+                        ))}
+                    </div>
+
+                    {recent.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 pt-1">
+                            <span className="font-medium flex items-center gap-1"><History size={14} className="text-stone-500"/> {t('recentSearches')}:</span>
+                            {recent.map(r => (
+                                <button 
+                                    key={r} 
+                                    onClick={() => { setQuery(r); performSearch(r); }} 
+                                    className="px-2.5 py-0.5 bg-white hover:bg-stone-100 rounded border border-stone-200 text-xs"
+                                >
+                                    {r}
+                                </button>
+                            ))}
+                            <button onClick={clearRecent} className="text-xs text-red-600 hover:underline ml-2">
+                                {t('clearHistory')}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
             
-            <div className="flex gap-4">
-                <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-1.5 rounded-lg border border-stone-300">
+            <div className="flex flex-wrap gap-4">
+                <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white min-h-[40px]">
                     <option value="">{t('allTypes')}</option>
                     {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-1.5 rounded-lg border border-stone-300">
+                <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white min-h-[40px]">
                     <option value="">{t('allTags')}</option>
                     {allTags.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
             </div>
 
-            {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
+            {error && <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">{error}</div>}
 
-            {results !== null && results.length === 0 && <p className="text-stone-500">{t('noResults')}</p>}
+            {loading && (
+                <div className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="p-5 bg-white rounded-2xl border border-stone-200 shadow-sm animate-pulse space-y-3">
+                            <div className="h-5 bg-stone-200 rounded w-1/3"></div>
+                            <div className="h-4 bg-stone-100 rounded w-full"></div>
+                            <div className="h-4 bg-stone-100 rounded w-2/3"></div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
-            {displayedResults && (
+            {results !== null && results.length === 0 && !loading && (
+                <div className="p-8 bg-white rounded-2xl border border-stone-200 text-center space-y-3">
+                    <p className="font-semibold text-stone-800 text-lg">{t('noResults')}</p>
+                    <p className="text-stone-600 text-sm">{t('noResultsSuggestions')}</p>
+                </div>
+            )}
+
+            {displayedResults && !loading && (
                 <div className="space-y-4">
                     {displayedResults.map(res => {
                         const rec = archive.records.find(r => r.id === res.id);
@@ -142,26 +245,31 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
                         const snippet = res.chunkText.startsWith(`${header}: `) ? res.chunkText.substring(header.length + 2) : res.chunkText;
                         
                         return (
-                            <div key={res.id} onClick={() => onOpenRec(res.id)} className="p-4 bg-white rounded-lg border border-stone-200 cursor-pointer hover:border-emerald-500">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h4 className="font-semibold text-stone-900">{rec.titolo}</h4>
-                                    <Badge type={rec.tipo} />
+                            <div key={res.id} onClick={() => onOpenRec(res.id)} className="p-5 bg-white rounded-2xl border border-stone-200 shadow-sm cursor-pointer hover:border-emerald-500 transition-all space-y-3">
+                                <div className="flex justify-between items-start gap-3">
+                                    <h4 className="font-serif font-bold text-lg text-stone-900">{rec.titolo}</h4>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {getRelevanceLabel(res.score)}
+                                        <span className="px-2.5 py-1 bg-stone-100 text-stone-800 rounded-lg text-xs font-medium">{rec.tipo}</span>
+                                    </div>
                                 </div>
-                                <div className="flex gap-1 mb-2">
-                                    {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-xs">{t}</span>)}
-                                </div>
-                                <div className="w-full bg-stone-100 h-1.5 rounded-full mb-2">
-                                    <div className="bg-emerald-600 h-1.5 rounded-full" style={{width: `${Math.min(100, (res.score / topScore) * 100)}%`}} title={`${(res.score * 100).toFixed(2)}% ${t('cosineSimilarity')}`} />
-                                </div>
-                                <p className="text-stone-600 line-clamp-3 text-sm">{snippet}</p>
+                                {rec.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-xs">{t}</span>)}
+                                    </div>
+                                )}
+                                <p className="text-stone-600 line-clamp-3 text-base leading-relaxed">{snippet}</p>
                             </div>
                         );
                     })}
-                    {results && results.length > topN && <Button onClick={() => setTopN(topN + 10)} variant="secondary">{t('showMore10')}</Button>}
+                    {results && results.length > topN && (
+                        <Button onClick={() => setTopN(topN + 10)} variant="secondary" className="w-full py-3 text-base font-semibold">
+                            {t('showMore10')}
+                        </Button>
+                    )}
                 </div>
             )}
-            
-            <p className="text-xs text-stone-400 mt-8">{t('disclaimerConsultation')}</p>
         </div>
     );
 };
+
