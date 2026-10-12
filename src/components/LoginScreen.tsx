@@ -1,12 +1,30 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {Button, inputCls} from './ui';
 import {Leaf} from 'lucide-react';
 
-export function LoginScreen({embedded = false, onLogin}: {embedded?: boolean; onLogin?: (user: {id: string, name: string}) => void}) {
+export function LoginScreen({
+    embedded = false,
+    onLogin,
+    onRegister,
+    onForgot
+}: {
+    embedded?: boolean;
+    onLogin?: (user: {id: string, name: string}) => void;
+    onRegister?: () => void;
+    onForgot?: () => void;
+}) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [health, setHealth] = useState<{ registration?: boolean; mail?: boolean } | null>(null);
+
+    useEffect(() => {
+        fetch('/api/health')
+            .then(res => res.json())
+            .then(data => setHealth(data))
+            .catch(() => {});
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,7 +63,7 @@ export function LoginScreen({embedded = false, onLogin}: {embedded?: boolean; on
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                    <label className="block text-base font-medium text-stone-700 mb-1.5">Nome utente</label>
+                    <label className="block text-base font-medium text-stone-700 mb-1.5">Nome utente o ID</label>
                     <input 
                         type="text" 
                         value={username} 
@@ -64,11 +82,36 @@ export function LoginScreen({embedded = false, onLogin}: {embedded?: boolean; on
                         className={inputCls + ' text-lg py-3'} 
                         required 
                     />
+                    <div className="flex justify-between items-center mt-1.5">
+                        {onForgot && (
+                            <button
+                                type="button"
+                                onClick={onForgot}
+                                className="text-sm text-emerald-700 hover:underline font-medium"
+                            >
+                                Password dimenticata?
+                            </button>
+                        )}
+                        {!health?.mail && onForgot && (
+                            <span className="text-xs text-stone-500">Contatta l'amministratore</span>
+                        )}
+                    </div>
                 </div>
                 {error && <p className="text-red-600 text-base p-3 bg-red-50 rounded-lg">{error}</p>}
-                <Button type="submit" loading={loading} className="w-full text-lg min-h-[48px]">
+                <Button type="submit" loading={loading} className="w-full text-lg min-h-[48px] bg-emerald-700 text-white hover:bg-emerald-800">
                     Accedi
                 </Button>
+                {health?.registration && onRegister && (
+                    <div className="text-center pt-2 border-t border-stone-100">
+                        <button
+                            type="button"
+                            onClick={onRegister}
+                            className="text-emerald-700 hover:underline text-base font-medium"
+                        >
+                            Registrati con codice d'invito
+                        </button>
+                    </div>
+                )}
             </form>
         </div>
     );

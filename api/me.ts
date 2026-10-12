@@ -7,5 +7,5 @@ export default async (req: any, res: any) => {
     if (!userId) return;
     const user = await getUser(userId);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    res.status(200).json({ user: { id: user.id, name: user.name, role: user.role } });
+    res.status(200).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 };

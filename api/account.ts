@@ -1,5 +1,5 @@
 import { requireAuth, verifyPassword, hashPassword, throttle, signSession, setCookie, getSecret } from './_lib/auth.js';
-import { getUser, validatePassword, isNameTaken, normalizeId } from './_lib/users.js';
+import { getUser, validatePassword, isNameTaken, validateEmail, isEmailTaken, saveUser } from './_lib/users.js';
 import { kvMode } from './_lib/kv.js';
 
 export default async (req: any, res: any) => {
@@ -27,7 +27,7 @@ export default async (req: any, res: any) => {
     const forwarded = req.headers['x-forwarded-for'];
     const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0] : req.socket.remoteAddress) || 'unknown';
 
-    const ipThrottle = await throttle(`account-ip:${ip}`, 10, 600);
+    const ipThrottle = await throttle(`account-ip:${ip}`, 5, 600);
     if (!ipThrottle.allowed) {
         return res.status(429).json({ error: 'Troppi tentativi. Riprova più tardi.' });
     }
@@ -37,7 +37,7 @@ export default async (req: any, res: any) => {
         return res.status(429).json({ error: 'Troppi tentativi. Riprova più tardi.' });
     }
 
-    const { action, currentPassword, newPassword, name } = req.body || {};
+    const { action, currentPassword, newPassword, name, email } = req.body || {};
 
     if (!currentPassword || typeof currentPassword !== 'string') {
         return res.status(400).json({ error: 'Password attuale richiesta' });
@@ -57,30 +57,12 @@ export default async (req: any, res: any) => {
             return res.status(400).json({ error: pwError });
         }
 
-        const now = Date.now();
-        const updatedUser = {
-            ...user,
-            hash: hashPassword(newPassword),
-            sessionsValidFrom: now,
-            source: 'kv' as const
-        };
-
-        const kv = (await import('./_lib/kv.js')).getKv();
-        if (!kv) {
-            return res.status(503).json({ error: 'Storage non disponibile' });
+        user.hash = hashPassword(newPassword);
+        user.sessionsValidFrom = Date.now();
+        const saved = await saveUser(user);
+        if (!saved) {
+            return res.status(500).json({ error: 'Errore durante il salvataggio' });
         }
-
-        await kv.set(`user:${user.id}`, JSON.stringify(updatedUser));
-
-        try {
-            const indexRaw = await kv.get('users:index');
-            let ids: string[] = indexRaw ? JSON.parse(indexRaw) : [];
-            if (!Array.isArray(ids)) ids = [];
-            if (!ids.includes(user.id)) {
-                ids.push(user.id);
-                await kv.set('users:index', JSON.stringify(ids));
-            }
-        } catch {}
 
         const token = signSession(user.id);
         if (!token) {
@@ -90,7 +72,7 @@ export default async (req: any, res: any) => {
         const secure = req.headers['x-forwarded-proto'] === 'https';
         setCookie(res, token, secure);
 
-        return res.status(200).json({ user: { id: user.id, name: user.name, role: user.role } });
+        return res.status(200).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     }
 
     if (action === 'name') {
@@ -107,30 +89,36 @@ export default async (req: any, res: any) => {
             return res.status(400).json({ error: 'Questo nome o ID è già in uso da un altro utente' });
         }
 
-        const updatedUser = {
-            ...user,
-            name: trimmedName,
-            source: 'kv' as const
-        };
-
-        const kv = (await import('./_lib/kv.js')).getKv();
-        if (!kv) {
-            return res.status(503).json({ error: 'Storage non disponibile' });
+        user.name = trimmedName;
+        const saved = await saveUser(user);
+        if (!saved) {
+            return res.status(500).json({ error: 'Errore durante il salvataggio' });
         }
 
-        await kv.set(`user:${user.id}`, JSON.stringify(updatedUser));
+        return res.status(200).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    }
 
-        try {
-            const indexRaw = await kv.get('users:index');
-            let ids: string[] = indexRaw ? JSON.parse(indexRaw) : [];
-            if (!Array.isArray(ids)) ids = [];
-            if (!ids.includes(user.id)) {
-                ids.push(user.id);
-                await kv.set('users:index', JSON.stringify(ids));
-            }
-        } catch {}
+    if (action === 'email') {
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ error: 'Nuova email richiesta' });
+        }
+        const emailErr = validateEmail(email);
+        if (emailErr) {
+            return res.status(400).json({ error: emailErr });
+        }
+        const normEmail = email.trim().toLowerCase();
+        const taken = await isEmailTaken(normEmail, user.id);
+        if (taken) {
+            return res.status(400).json({ error: 'Questa email è già in uso da un altro utente' });
+        }
 
-        return res.status(200).json({ user: { id: user.id, name: trimmedName, role: user.role } });
+        user.email = normEmail;
+        const saved = await saveUser(user);
+        if (!saved) {
+            return res.status(400).json({ error: 'Email già in uso o errore di salvataggio' });
+        }
+
+        return res.status(200).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     }
 
     return res.status(400).json({ error: 'Azione non valida' });

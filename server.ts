@@ -10,6 +10,9 @@ import meHandler from './api/me.js';
 
 import accountHandler from './api/account.js';
 import usersHandler from './api/users.js';
+import registerHandler from './api/register.js';
+import forgotHandler from './api/forgot.js';
+import resetHandler from './api/reset.js';
 
 dotenv.config({ path: ['.env.local', '.env'] });
 
@@ -24,6 +27,9 @@ app.post('/api/embed', embedHandler);
 app.post('/api/login', loginHandler);
 app.post('/api/logout', logoutHandler);
 app.get('/api/me', meHandler);
+app.post('/api/register', registerHandler);
+app.post('/api/forgot', forgotHandler);
+app.post('/api/reset', resetHandler);
 app.all('/api/account', accountHandler);
 app.all('/api/users', usersHandler);
 

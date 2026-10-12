@@ -1,14 +1,16 @@
 import {useState, useEffect} from 'react';
 import {RefreshCw} from 'lucide-react';
-import {Landing} from './components/Landing';
 import {LoginScreen} from './components/LoginScreen';
+import {RegisterForm, ForgotForm, ResetForm} from './components/AuthForms';
 import App from './App';
 
 export default function AuthGate() {
-    const [user, setUser] = useState<{id: string, name: string} | null>(null);
+    const [user, setUser] = useState<{id: string, name: string, email?: string, role?: string} | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [sessionExpired, setSessionExpired] = useState(false);
+    const [authView, setAuthView] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
+    const [resetToken, setResetToken] = useState<string | null>(null);
 
     const checkAuth = async () => {
         setLoading(true);
@@ -29,6 +31,17 @@ export default function AuthGate() {
     };
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const resetVal = params.get('reset');
+        if (resetVal) {
+            setResetToken(resetVal);
+            setAuthView('reset');
+            params.delete('reset');
+            const newSearch = params.toString();
+            const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        }
+
         checkAuth();
         const handleUnauthorized = () => setSessionExpired(true);
         window.addEventListener('auth:unauthorized', handleUnauthorized);
@@ -65,7 +78,36 @@ export default function AuthGate() {
     }
 
     if (!user) {
-        return <Landing onLogin={(u) => setUser(u)} />;
+        return (
+            <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+                {authView === 'login' && (
+                    <LoginScreen 
+                        embedded 
+                        onLogin={(u) => setUser(u)} 
+                        onRegister={() => setAuthView('register')} 
+                        onForgot={() => setAuthView('forgot')} 
+                    />
+                )}
+                {authView === 'register' && (
+                    <RegisterForm 
+                        onBackToLogin={() => setAuthView('login')} 
+                        onSuccess={(u) => setUser(u)} 
+                    />
+                )}
+                {authView === 'forgot' && (
+                    <ForgotForm 
+                        onBackToLogin={() => setAuthView('login')} 
+                        mailActive={true} 
+                    />
+                )}
+                {authView === 'reset' && resetToken && (
+                    <ResetForm 
+                        token={resetToken} 
+                        onBackToLogin={() => { setResetToken(null); setAuthView('login'); }} 
+                    />
+                )}
+            </div>
+        );
     }
 
     return (

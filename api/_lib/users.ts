@@ -10,6 +10,7 @@ export type User = {
     sessionsValidFrom: number;
     recoveryHash?: string;
     role: 'admin' | 'user';
+    email?: string;
 };
 
 export const normalizeId = (s: any): string => String(s || '').trim().toLowerCase();
@@ -162,7 +163,84 @@ export const getAllUsers = async (): Promise<User[]> => {
     }
 };
 
-export const createUser = async (u: { id: string; name: string; password: string; role?: 'admin' | 'user'; fromEnv?: boolean }) => {
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const validateEmail = (email: any): string | null => {
+    if (typeof email !== 'string') return 'Email non valida';
+    const trimmed = email.trim().toLowerCase();
+    if (trimmed.length > 200 || !EMAIL_RE.test(trimmed)) return 'Email non valida';
+    return null;
+};
+
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+    if (!email || typeof email !== 'string') return null;
+    const normEmail = email.trim().toLowerCase();
+    const kv = getKv();
+    if (kv) {
+        try {
+            const id = await kv.get(`email:${normEmail}`);
+            if (id) {
+                return await getUser(id);
+            }
+        } catch {}
+    }
+    const all = await getAllUsers();
+    return all.find(u => u.email && u.email.toLowerCase() === normEmail) || null;
+};
+
+export const isEmailTaken = async (email: string, exceptId?: string): Promise<boolean> => {
+    if (!email || typeof email !== 'string') return false;
+    const normEmail = email.trim().toLowerCase();
+    const normExcept = exceptId ? normalizeId(exceptId) : undefined;
+    const existing = await getUserByEmail(normEmail);
+    if (!existing) return false;
+    if (normExcept && existing.id === normExcept) return false;
+    return true;
+};
+
+export const saveUser = async (user: User): Promise<boolean> => {
+    const kv = getKv();
+    if (!kv) return false;
+    const normId = normalizeId(user.id);
+    const oldUser = await getUser(normId);
+
+    if (oldUser && oldUser.email && oldUser.email !== user.email) {
+        try {
+            await kv.del(`email:${oldUser.email.toLowerCase()}`);
+        } catch {}
+    }
+
+    if (user.email) {
+        const normEmail = user.email.trim().toLowerCase();
+        const existingId = await kv.get(`email:${normEmail}`);
+        if (existingId && existingId !== normId) {
+            return false;
+        }
+        await kv.set(`email:${normEmail}`, normId);
+    }
+
+    const updated: User = {
+        ...user,
+        id: normId,
+        source: 'kv',
+        email: user.email ? user.email.trim().toLowerCase() : undefined
+    };
+
+    await kv.set(`user:${normId}`, JSON.stringify(updated));
+
+    try {
+        const indexRaw = await kv.get('users:index');
+        let ids: string[] = indexRaw ? JSON.parse(indexRaw) : [];
+        if (!Array.isArray(ids)) ids = [];
+        if (!ids.includes(normId)) {
+            ids.push(normId);
+            await kv.set('users:index', JSON.stringify(ids));
+        }
+    } catch {}
+
+    return true;
+};
+
+export const createUser = async (u: { id: string; name: string; password: string; email?: string; role?: 'admin' | 'user'; fromEnv?: boolean }) => {
     const normId = normalizeId(u.id);
     if (!ID_RE.test(normId)) {
         return { ok: false, error: 'ID non valido (3-64 caratteri alfanumerici, . _ @ -)' };
@@ -171,9 +249,32 @@ export const createUser = async (u: { id: string; name: string; password: string
         return { ok: false, error: 'Questo ID è riservato' };
     }
 
+    if (await isNameTaken(u.name, normId)) {
+        return { ok: false, error: 'Nome già in uso' };
+    }
+
+    let normEmail: string | undefined = undefined;
+    if (u.email) {
+        const errEmail = validateEmail(u.email);
+        if (errEmail) return { ok: false, error: errEmail };
+        normEmail = u.email.trim().toLowerCase();
+        if (await isEmailTaken(normEmail, normId)) {
+            return { ok: false, error: 'Email già in uso' };
+        }
+    }
+
     const kv = getKv();
     if (!kv) {
         return { ok: false, error: 'Storage non disponibile' };
+    }
+
+    if (normEmail) {
+        await kv.set(`email:${normEmail}`, normId, { nx: true });
+        const owner = await kv.get(`email:${normEmail}`);
+        if (owner && owner !== normId) {
+            return { ok: false, error: 'Email già in uso' };
+        }
+        await kv.set(`email:${normEmail}`, normId);
     }
 
     const newUser: User = {
@@ -183,14 +284,15 @@ export const createUser = async (u: { id: string; name: string; password: string
         created: new Date().toISOString(),
         source: 'kv',
         sessionsValidFrom: 0,
+        email: normEmail,
         role: u.role || 'user'
     };
 
     const setOk = await kv.set(`user:${normId}`, JSON.stringify(newUser), { nx: !u.fromEnv });
     if (!setOk && !u.fromEnv) {
+        if (normEmail) await kv.del(`email:${normEmail}`);
         return { ok: false, error: 'Utente già esistente' };
     }
-    // If fromEnv, we can overwrite or save without nx restriction
     if (u.fromEnv) {
         await kv.set(`user:${normId}`, JSON.stringify(newUser));
     }
@@ -209,12 +311,14 @@ export const createUser = async (u: { id: string; name: string; password: string
 };
 
 export const isNameTaken = async (name: string, exceptId?: string): Promise<boolean> => {
+    if (!name || typeof name !== 'string') return false;
     const normName = normalizeId(name);
+    const trimmedLower = name.trim().toLowerCase();
     const normExcept = exceptId ? normalizeId(exceptId) : undefined;
     const all = await getAllUsers();
     for (const u of all) {
         if (normExcept && u.id === normExcept) continue;
-        if (u.id === normName || u.name.toLowerCase() === name.trim().toLowerCase()) {
+        if (u.id === normName || u.id === trimmedLower || u.name.trim().toLowerCase() === trimmedLower) {
             return true;
         }
     }

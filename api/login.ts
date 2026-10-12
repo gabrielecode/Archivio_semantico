@@ -45,5 +45,5 @@ export default async (req: any, res: any) => {
 
     const secure = req.headers['x-forwarded-proto'] === 'https';
     setCookie(res, token, secure);
-    res.status(200).json({ user: { id: user!.id, name: user!.name, role: user!.role } });
+    res.status(200).json({ user: { id: user!.id, name: user!.name, email: user!.email, role: user!.role } });
 };

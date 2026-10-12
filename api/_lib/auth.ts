@@ -104,11 +104,13 @@ export const getAuthStatus = () => {
     const secretOk = !!process.env.AUTH_SECRET;
     const geminiOk = !!process.env.GEMINI_API_KEY;
     const registration = !!process.env.INVITE_CODE && kvMode() !== 'none';
+    const mail = !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM && process.env.APP_URL);
     return {
         users: envUsers().length,
         store: kvMode(),
         auth: secretOk,
         embed: geminiOk,
-        registration
+        registration,
+        mail
     };
 };
