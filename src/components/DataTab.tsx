@@ -76,6 +76,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     }
   }, [selectedId, archive.records, archive.schema.tipi, setSelectedId]);
 
+
+
   const handleSave = () => {
     if (!draft) return;
     const now = new Date().toISOString();
@@ -120,6 +122,20 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         createNew();
     }
   };
+
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+              e.preventDefault();
+              handleSave();
+          } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+              e.preventDefault();
+              handleNuovo();
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [draft, isDirty]);
 
   const handleViewChange = (newView: 'Modulo' | 'Tabella') => {
     if (isDirty) {

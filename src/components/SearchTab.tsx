@@ -35,6 +35,18 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
     const [recent, setRecent] = useState<string[]>([]);
     const abortController = useRef<AbortController | null>(null);
     const queryCache = useRef<{q: string, vec: number[]} | null>(null);
+    const searchRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                searchRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     useEffect(() => {
         try {
@@ -157,14 +169,26 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
     return (
         <div className="space-y-6 text-stone-900 text-base">
             <div className="space-y-3">
-                <div className="flex gap-2">
-                    <input 
-                        value={query} 
-                        onChange={e => setQuery(e.target.value)} 
-                        onKeyDown={e => e.key === 'Enter' && handleSearch()} 
-                        placeholder={t('searchPlaceholder')} 
-                        className="flex-1 px-4 py-3 text-base rounded-xl border border-stone-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none min-h-[44px]" 
-                    />
+                <div className="relative flex gap-2">
+                    <div className="relative flex-1">
+                        <input 
+                            ref={searchRef}
+                            value={query} 
+                            onChange={e => setQuery(e.target.value)} 
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+                            placeholder={`${t('searchPlaceholder')} (premi '/' per cercare)`} 
+                            className="w-full pl-4 pr-10 py-3 text-base rounded-xl border border-stone-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none min-h-[44px]" 
+                        />
+                        {query && (
+                            <button 
+                                onClick={() => { setQuery(''); setResults(null); searchRef.current?.focus(); }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 px-1.5 py-0.5 text-sm font-bold"
+                                title="Cancella ricerca"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
                     <Button onClick={handleSearch} loading={loading} icon={Search} className="px-6 min-h-[44px] text-base font-semibold">
                         {t('searchBtn')}
                     </Button>
