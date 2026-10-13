@@ -174,7 +174,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     });
   };
 
-  if (archive.records.length === 0 && isNew) {
+  if (archive.records.length === 0 && !draft) {
       return (
           <EmptyState 
               icon={FileText} 
