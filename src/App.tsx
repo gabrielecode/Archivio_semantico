@@ -292,7 +292,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
             </header>
             
             <main id="main" className="max-w-6xl mx-auto p-4 sm:p-6">
-                <div role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} /></div>
+                <div role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} updateArchive={updateArchive} /></div>
                 <div role="tabpanel" className={tab === 'schede' ? '' : 'hidden'}><DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} /></div>
                 <div role="tabpanel" className={tab === 'graph' ? '' : 'hidden'}><GraphTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} /></div>
                 <div role="tabpanel" className={tab === 'campi' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>

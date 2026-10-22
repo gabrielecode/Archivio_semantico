@@ -5,6 +5,7 @@ import {fetchEmbeddings} from '../utils/api';
 import {Button, EmptyState} from './ui';
 import {buildHeader} from '../utils/chunk';
 import {useTranslation} from '../utils/i18n';
+import {SuggestionsBox} from './SuggestionsBox';
 
 function cosineSimilarity(a: number[], b: number[]): number {
     let dotProduct = 0;
@@ -23,7 +24,7 @@ function normalizeText(text: string): string {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onOpenRec: (id: string) => void, onGoData: () => void}) => {
+export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archive: Archive, onOpenRec: (id: string) => void, onGoData: () => void, updateArchive: (fn: (a: Archive) => Archive) => void}) => {
     const {t} = useTranslation();
     const [query, setQuery] = useState('');
     const [tipo, setTipo] = useState('');
@@ -258,6 +259,10 @@ export const SearchTab = ({archive, onOpenRec, onGoData}: {archive: Archive, onO
                     <p className="font-semibold text-stone-800 text-lg">{t('noResults')}</p>
                     <p className="text-stone-600 text-sm">{t('noResultsSuggestions')}</p>
                 </div>
+            )}
+
+            {results === null && !loading && (
+                <SuggestionsBox archive={archive} onOpenRec={onOpenRec} updateArchive={updateArchive} t={t} />
             )}
 
             {displayedResults && !loading && (

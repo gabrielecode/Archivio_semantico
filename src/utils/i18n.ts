@@ -189,6 +189,15 @@ export const translations: Record<Lang, Record<string, string>> = {
     voicesToPrepare: "schede da preparare",
     prepareNow: "Prepara ora",
     preparingSearch: "Sto preparando la ricerca",
+    suggestionsTitle: "Suggerimenti & Analisi Archivio",
+    suggestionsSub: "Spunti per arricchire la rete di conoscenze del tuo archivio",
+    ghostNodesHeader: "Concetti mancanti più linkati (Ghost Nodes)",
+    shortRecordsHeader: "Schede con più backlink da espandere (< 300 car.)",
+    createCardBtn: "Crea scheda",
+    noGhostNodes: "Nessun concetto mancante rilevato.",
+    noShortRecords: "Nessuna scheda corta con backlink rilevata.",
+    linksSuffix: "link",
+    backlinksSuffix: "backlink",
   },
   de: {
     appName: "TCM Semantische Suche",
@@ -355,7 +364,16 @@ export const translations: Record<Lang, Record<string, string>> = {
     guideFaq4Q: "Die Suche findet nichts.",
     guideFaq4A: "Prüfen Sie, ob die Karten 'indexiert' sind (grüner Punkt). Falls nicht, klicken Sie auf 'Embedding generieren'.",
     guideFaq5Q: "Ersetzt das Programm ärztlichen Rat?",
-    guideFaq5A: "Nein. Dies ist ein reines Nachschlagewerk und ersetzt keine ärztliche Beratung."
+    guideFaq5A: "Nein. Dies ist ein reines Nachschlagewerk und ersetzt keine ärztliche Beratung.",
+    suggestionsTitle: "Vorschläge & Archiv-Analyse",
+    suggestionsSub: "Hinweise zur Erweiterung Ihres Wissensnetzes",
+    ghostNodesHeader: "Meist verlinkte fehlende Konzepte (Ghost Nodes)",
+    shortRecordsHeader: "Zu erweiternde Karten mit vielen Backlinks (< 300 Z.)",
+    createCardBtn: "Karte erstellen",
+    noGhostNodes: "Keine fehlenden Konzepte gefunden.",
+    noShortRecords: "Keine kurzen Karten mit Backlinks gefunden.",
+    linksSuffix: "Links",
+    backlinksSuffix: "Backlinks",
   }
 };
 

@@ -1,7 +1,7 @@
 import React, {useState, useMemo, useRef} from 'react';
 import {Archive, Rec} from '../types';
 import ForceGraph2D from 'react-force-graph-2d';
-import {findRecordByTitle} from '../utils/parser';
+import {findRecordByTitle, extractWikiLinks} from '../utils/parser';
 import {Search, Filter, Network, ExternalLink, RotateCcw} from 'lucide-react';
 import {Button, inputCls} from './ui';
 
@@ -18,8 +18,19 @@ const CATEGORY_COLORS: Record<string, string> = {
     'Sindrome': '#dc2626', // red-600
     'Teoria/Concetto': '#db2777', // pink-600
     'Documento': '#4f46e5', // indigo-600
-    'Nota': '#64748b' // slate-500
+    'Nota': '#64748b', // slate-500
+    'Non risolto': '#94a3b8' // slate-400
 };
+
+const RELATION_COLORS: Record<string, string> = {
+    'appartiene_a': '#059669', // emerald-600
+    'tratta': '#2563eb', // blue-600
+    'correlato_a': '#d97706' // amber-600
+};
+
+function getColorForRelation(tipo: string): string {
+    return RELATION_COLORS[tipo] || '#9ca3af';
+}
 
 function getColorForCategory(cat: string): string {
     if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
@@ -41,6 +52,7 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
     const categories = useMemo(() => {
         const set = new Set<string>();
         archive.records.forEach(r => set.add(r.categoria || r.tipo || 'Generale'));
+        set.add('Non risolto');
         return Array.from(set);
     }, [archive.records]);
 
@@ -60,19 +72,103 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
             degreeMap.set(r.id, 0);
         });
 
-        const links: { source: string; target: string }[] = [];
+        const links: { source: string; target: string; tipoRelazione: string; isGhost?: boolean }[] = [];
+        const ghostNodesMap = new Map<string, { title: string; count: number }>();
 
         archive.records.forEach(sourceRec => {
-            const outlinks = sourceRec.outlinks || [];
-            outlinks.forEach(targetTitle => {
-                const targetId = findRecordByTitle(archive, targetTitle)?.id;
-                if (targetId && targetId !== sourceRec.id) {
+            const wikiLinks = extractWikiLinks(sourceRec.contenuto);
+            const processedTargets = new Set<string>();
+
+            wikiLinks.forEach(wl => {
+                const targetRec = findRecordByTitle(archive, wl.targetTitle);
+                if (targetRec && targetRec.id !== sourceRec.id && !processedTargets.has(targetRec.id)) {
+                    processedTargets.add(targetRec.id);
+                    let tipo = wl.tipoRelazione;
+                    if (!tipo) {
+                        const srcCat = (sourceRec.categoria || sourceRec.tipo || '').toLowerCase();
+                        const tgtCat = (targetRec.categoria || targetRec.tipo || '').toLowerCase();
+                        if (srcCat.includes('punto') && tgtCat.includes('meridiano')) {
+                            tipo = 'appartiene_a';
+                        } else if (srcCat.includes('erba') || srcCat.includes('formula') || srcCat.includes('tratt')) {
+                            tipo = 'tratta';
+                        } else {
+                            tipo = 'correlato_a';
+                        }
+                    }
                     links.push({
                         source: sourceRec.id,
-                        target: targetId
+                        target: targetRec.id,
+                        tipoRelazione: tipo
                     });
                     degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
-                    degreeMap.set(targetId, (degreeMap.get(targetId) || 0) + 1);
+                    degreeMap.set(targetRec.id, (degreeMap.get(targetRec.id) || 0) + 1);
+                } else if (!targetRec) {
+                    const cleanTitle = wl.targetTitle.trim();
+                    if (cleanTitle && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
+                        const ghostKey = cleanTitle.toLowerCase();
+                        const ghostId = `ghost-${ghostKey}`;
+                        if (!processedTargets.has(ghostId)) {
+                            processedTargets.add(ghostId);
+                            if (!ghostNodesMap.has(ghostKey)) {
+                                ghostNodesMap.set(ghostKey, { title: cleanTitle, count: 0 });
+                                degreeMap.set(ghostId, 0);
+                            }
+                            ghostNodesMap.get(ghostKey)!.count++;
+                            links.push({
+                                source: sourceRec.id,
+                                target: ghostId,
+                                tipoRelazione: wl.tipoRelazione || 'correlato_a',
+                                isGhost: true
+                            });
+                            degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
+                            degreeMap.set(ghostId, (degreeMap.get(ghostId) || 0) + 1);
+                        }
+                    }
+                }
+            });
+
+            const outlinks = sourceRec.outlinks || [];
+            outlinks.forEach(targetTitle => {
+                const targetRec = findRecordByTitle(archive, targetTitle);
+                if (targetRec && targetRec.id !== sourceRec.id && !processedTargets.has(targetRec.id)) {
+                    processedTargets.add(targetRec.id);
+                    let tipo = 'correlato_a';
+                    const srcCat = (sourceRec.categoria || sourceRec.tipo || '').toLowerCase();
+                    const tgtCat = (targetRec.categoria || targetRec.tipo || '').toLowerCase();
+                    if (srcCat.includes('punto') && tgtCat.includes('meridiano')) {
+                        tipo = 'appartiene_a';
+                    } else if (srcCat.includes('erba') || srcCat.includes('formula')) {
+                        tipo = 'tratta';
+                    }
+                    links.push({
+                        source: sourceRec.id,
+                        target: targetRec.id,
+                        tipoRelazione: tipo
+                    });
+                    degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
+                    degreeMap.set(targetRec.id, (degreeMap.get(targetRec.id) || 0) + 1);
+                } else if (!targetRec) {
+                    const cleanTitle = targetTitle.trim();
+                    if (cleanTitle && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
+                        const ghostKey = cleanTitle.toLowerCase();
+                        const ghostId = `ghost-${ghostKey}`;
+                        if (!processedTargets.has(ghostId)) {
+                            processedTargets.add(ghostId);
+                            if (!ghostNodesMap.has(ghostKey)) {
+                                ghostNodesMap.set(ghostKey, { title: cleanTitle, count: 0 });
+                                degreeMap.set(ghostId, 0);
+                            }
+                            ghostNodesMap.get(ghostKey)!.count++;
+                            links.push({
+                                source: sourceRec.id,
+                                target: ghostId,
+                                tipoRelazione: 'correlato_a',
+                                isGhost: true
+                            });
+                            degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
+                            degreeMap.set(ghostId, (degreeMap.get(ghostId) || 0) + 1);
+                        }
+                    }
                 }
             });
         });
@@ -97,14 +193,37 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                 val: Math.max(4, Math.min(20, 4 + deg * 2)),
                 color: getColorForCategory(cat),
                 highlighted: searchTerm !== '' && matchesSearch,
-                visible: isFiltered
+                visible: isFiltered,
+                isGhost: false
             };
         });
 
-        // Filter nodes and valid links
-        const visibleNodeIds = new Set(nodes.filter(n => n.visible).map(n => n.id));
+        const ghostNodes: any[] = [];
+        ghostNodesMap.forEach((data, ghostKey) => {
+            const ghostId = `ghost-${ghostKey}`;
+            const deg = degreeMap.get(ghostId) || 0;
+            const matchesSearch = searchTerm === '' || data.title.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = selectedCategory === 'all' || selectedCategory === 'Non risolto';
+            const matchesTag = selectedTag === 'all';
+            const isFiltered = matchesSearch && matchesCategory && matchesTag;
+
+            ghostNodes.push({
+                id: ghostId,
+                name: data.title,
+                category: 'Non risolto',
+                tags: [],
+                val: Math.max(4, Math.min(16, 4 + deg * 2)),
+                color: '#94a3b8',
+                highlighted: searchTerm !== '' && matchesSearch,
+                visible: isFiltered,
+                isGhost: true
+            });
+        });
+
+        const allNodes = [...nodes, ...ghostNodes];
+        const visibleNodeIds = new Set(allNodes.filter(n => n.visible).map(n => n.id));
         const filteredLinks = links.filter(l => visibleNodeIds.has(l.source as string) && visibleNodeIds.has(l.target as string));
-        const filteredNodes = nodes.filter(n => n.visible);
+        const filteredNodes = allNodes.filter(n => n.visible);
 
         return {
             nodes: filteredNodes,
@@ -177,28 +296,59 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                         const fontSize = Math.max(10, 12 / globalScale);
                         ctx.font = `${fontSize}px sans-serif`;
                         
-                        // Draw node circle
-                        ctx.beginPath();
-                        ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
-                        ctx.fillStyle = node.highlighted ? '#f59e0b' : node.color;
-                        ctx.fill();
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 1.5 / globalScale;
-                        ctx.stroke();
+                        if (node.isGhost) {
+                            ctx.beginPath();
+                            ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
+                            ctx.fillStyle = '#f8fafc';
+                            ctx.fill();
+                            ctx.strokeStyle = '#94a3b8';
+                            ctx.lineWidth = 1.5 / globalScale;
+                            ctx.setLineDash([3, 3]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
+                            ctx.fillStyle = node.highlighted ? '#f59e0b' : node.color;
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1.5 / globalScale;
+                            ctx.stroke();
+                        }
 
-                        // Draw label if zoom is sufficient or node is highlighted
                         if (globalScale >= 1.2 || node.highlighted) {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'top';
-                            ctx.fillStyle = '#1c1917';
+                            ctx.fillStyle = node.isGhost ? '#64748b' : '#1c1917';
+                            if (node.isGhost) {
+                                ctx.font = `italic ${fontSize}px sans-serif`;
+                            }
                             ctx.fillText(label, node.x, node.y + node.val + 2);
                         }
                     }}
                     onNodeClick={(node: any) => {
-                        onOpenRec(node.id);
+                        if (!node.isGhost) {
+                            onOpenRec(node.id);
+                        }
                     }}
-                    linkColor={() => '#e7e5e4'}
-                    linkWidth={1.5}
+                    linkCanvasObject={(link: any, ctx: CanvasRenderingContext2D) => {
+                        const start = link.source;
+                        const end = link.target;
+                        if (!start || !end || typeof start.x !== 'number' || typeof end.x !== 'number') return;
+                        ctx.beginPath();
+                        ctx.moveTo(start.x, start.y);
+                        ctx.lineTo(end.x, end.y);
+                        ctx.strokeStyle = link.isGhost ? '#cbd5e1' : getColorForRelation(link.tipoRelazione);
+                        ctx.lineWidth = link.isGhost ? 1.5 : 2;
+                        if (link.isGhost) {
+                            ctx.setLineDash([4, 4]);
+                        } else {
+                            ctx.setLineDash([]);
+                        }
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }}
+                    linkLabel={(link: any) => link.isGhost ? 'Link non risolto (Ghost)' : `Relazione: ${link.tipoRelazione}`}
                     cooldownTicks={100}
                 />
                 
@@ -208,6 +358,16 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                         <div key={cat} className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getColorForCategory(cat) }} />
                             <span className="text-stone-700 truncate max-w-[150px]">{cat}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-xs border border-stone-200 rounded-2xl p-3 shadow-sm text-xs space-y-1.5 pointer-events-none">
+                    <div className="font-semibold text-stone-800 mb-1">Tipo Relazione (Archi)</div>
+                    {Object.entries(RELATION_COLORS).map(([tipo, color]) => (
+                        <div key={tipo} className="flex items-center gap-2">
+                            <span className="w-4 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                            <span className="text-stone-700">{tipo}</span>
                         </div>
                     ))}
                 </div>

@@ -4,25 +4,110 @@ export interface WikiLinkMatch {
     raw: string;
     targetTitle: string;
     label: string;
+    tipoRelazione?: string;
 }
 
 export function extractWikiLinks(content: string): WikiLinkMatch[] {
     if (!content) return [];
-    const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+    const regex = /\[\[([^\]|]+)(?:\|([^\]|]*)(?:\|([^\]]+))?)?\]\]/g;
     const matches: WikiLinkMatch[] = [];
     let match;
     while ((match = regex.exec(content)) !== null) {
         const targetTitle = match[1].trim();
-        const label = match[2] ? match[2].trim() : targetTitle;
+        const part2 = match[2] ? match[2].trim() : '';
+        const part3 = match[3] ? match[3].trim() : '';
+
+        let label = targetTitle;
+        let tipoRelazione: string | undefined = undefined;
+        const knownRels = ['appartiene_a', 'tratta', 'correlato_a'];
+
+        if (part3) {
+            label = part2 || targetTitle;
+            tipoRelazione = part3;
+        } else if (part2) {
+            if (knownRels.includes(part2)) {
+                tipoRelazione = part2;
+                label = targetTitle;
+            } else {
+                label = part2;
+            }
+        }
+
         if (targetTitle) {
             matches.push({
                 raw: match[0],
                 targetTitle,
-                label
+                label,
+                tipoRelazione
             });
         }
     }
     return matches;
+}
+
+export interface WikiLinkSegment {
+    type: 'text' | 'link';
+    content: string;
+    targetTitle?: string;
+    label?: string;
+    tipoRelazione?: string;
+}
+
+export function parseWikiSegments(content: string): WikiLinkSegment[] {
+    if (!content) return [];
+    const regex = /\[\[([^\]|]+)(?:\|([^\]|]*)(?:\|([^\]]+))?)?\]\]/g;
+    const segments: WikiLinkSegment[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+        const matchIndex = match.index;
+        if (matchIndex > lastIndex) {
+            segments.push({
+                type: 'text',
+                content: content.substring(lastIndex, matchIndex)
+            });
+        }
+
+        const targetTitle = match[1].trim();
+        const part2 = match[2] ? match[2].trim() : '';
+        const part3 = match[3] ? match[3].trim() : '';
+
+        let label = targetTitle;
+        let tipoRelazione: string | undefined = undefined;
+        const knownRels = ['appartiene_a', 'tratta', 'correlato_a'];
+
+        if (part3) {
+            label = part2 || targetTitle;
+            tipoRelazione = part3;
+        } else if (part2) {
+            if (knownRels.includes(part2)) {
+                tipoRelazione = part2;
+                label = targetTitle;
+            } else {
+                label = part2;
+            }
+        }
+
+        segments.push({
+            type: 'link',
+            content: match[0],
+            targetTitle,
+            label,
+            tipoRelazione
+        });
+
+        lastIndex = matchIndex + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+        segments.push({
+            type: 'text',
+            content: content.substring(lastIndex)
+        });
+    }
+
+    return segments;
 }
 
 export function updateRecordOutlinks(record: Rec): Rec {
