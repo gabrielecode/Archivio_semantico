@@ -72,12 +72,20 @@ function isValidISO(date: any) {
 }
 
 function normalizeRecord(r: any): Rec {
+    const tipo = r.tipo || r.categoria || 'Sintomo';
+    const categoria = r.categoria || tipo;
+    const rawTags = Array.isArray(r.tags) ? r.tags : (Array.isArray(r.tag) ? r.tag : []);
+    const tags = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t !== '');
+    const outlinks = Array.isArray(r.outlinks) ? r.outlinks.map((o: any) => String(o).trim()).filter((o: string) => o !== '') : [];
     return {
         id: r.id || crypto.randomUUID(),
         titolo: r.titolo || 'Senza titolo',
-        tipo: r.tipo || 'Sintomo',
+        tipo,
+        categoria,
         contenuto: r.contenuto || '',
-        tags: Array.isArray(r.tags) ? r.tags.map((t: any) => String(t).trim()).filter((t: string) => t !== '') : [],
+        tags,
+        tag: tags,
+        outlinks,
         fonte: r.fonte || '',
         campi: Object.fromEntries(Object.entries(r.campi || {}).map(([k, v]) => [k, String(v)])),
         creato: r.creato || new Date().toISOString(),

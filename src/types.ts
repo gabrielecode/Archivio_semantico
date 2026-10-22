@@ -6,8 +6,11 @@ export interface Rec {
   id: string;
   titolo: string;
   tipo: string;
+  categoria: string;
   contenuto: string;
   tags: string[];
+  tag: string[];
+  outlinks: string[];
   fonte: string;
   campi: Record<string, string>;
   creato: string;

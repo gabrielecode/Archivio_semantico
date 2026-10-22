@@ -70,19 +70,26 @@ export function ImportPanel({archive, setArchive, setDirty, onClose, toast}: {
 
     const doImport = () => {
         if (!preview) return;
-        const importedRecords: Rec[] = preview.data.map(r => ({
-            id: crypto.randomUUID(),
-            titolo: r.titolo,
-            tipo: archive.schema.tipi.find(t => t.toLowerCase() === (r.tipo || '').toLowerCase()) || r.tipo || archive.schema.tipi[0],
-            contenuto: r.contenuto || '',
-            tags: r.tags || [],
-            fonte: r.fonte || '',
-            campi: r.campi || {},
-            creato: new Date().toISOString(),
-            modificato: new Date().toISOString(),
-            embHash: '',
-            chunks: []
-        }));
+        const importedRecords: Rec[] = preview.data.map(r => {
+            const tipo = archive.schema.tipi.find(t => t.toLowerCase() === (r.tipo || '').toLowerCase()) || r.tipo || archive.schema.tipi[0];
+            const tags = r.tags || [];
+            return {
+                id: crypto.randomUUID(),
+                titolo: r.titolo,
+                tipo,
+                categoria: tipo,
+                contenuto: r.contenuto || '',
+                tags,
+                tag: tags,
+                outlinks: [],
+                fonte: r.fonte || '',
+                campi: r.campi || {},
+                creato: new Date().toISOString(),
+                modificato: new Date().toISOString(),
+                embHash: '',
+                chunks: []
+            };
+        });
         setArchive(a => ({...a, records: [...a.records, ...importedRecords]}));
         setDirty(true);
         toast(`Importate ${importedRecords.length} voci`, 'success');

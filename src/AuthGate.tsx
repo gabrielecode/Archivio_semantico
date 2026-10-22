@@ -9,11 +9,13 @@ import {
     signOut, 
     User 
 } from 'firebase/auth';
-import { auth, googleProvider } from './lib/firebase';
+import { auth, googleProvider, db } from './lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button, Modal } from './components/ui';
 import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle, Globe, Cloud, Eye, EyeOff } from 'lucide-react';
 import App from './App';
 import GuideContent from './components/GuideContent';
+import { AdminPanel } from './components/AdminPanel';
 import { useTranslation } from './utils/i18n';
 
 export default function AuthGate() {
@@ -29,11 +31,25 @@ export default function AuthGate() {
     const [submitting, setSubmitting] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showAdmin, setShowAdmin] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setFirebaseUser(user);
             setLoadingAuth(false);
+            if (user) {
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        uid: user.uid,
+                        email: user.email || '',
+                        displayName: user.displayName || user.email?.split('@')[0] || 'Utente',
+                        lastLogin: new Date().toISOString(),
+                        createdAt: user.metadata.creationTime ? new Date(user.metadata.creationTime).toISOString() : new Date().toISOString()
+                    }, { merge: true });
+                } catch (e) {
+                    console.error('Error saving user profile:', e);
+                }
+            }
         });
         return () => unsubscribe();
     }, []);
@@ -194,6 +210,9 @@ export default function AuthGate() {
     }
 
     if (firebaseUser) {
+        if (showAdmin && firebaseUser.email === 'gestsocialgabriele@gmail.com') {
+            return <AdminPanel onBack={() => setShowAdmin(false)} />;
+        }
         const userInfo = {
             id: firebaseUser.uid,
             name: firebaseUser.displayName || firebaseUser.email || 'Utente',
@@ -203,6 +222,7 @@ export default function AuthGate() {
             <App 
                 user={userInfo} 
                 onLogout={() => signOut(auth)} 
+                onOpenAdmin={firebaseUser.email === 'gestsocialgabriele@gmail.com' ? () => setShowAdmin(true) : undefined}
             />
         );
     }

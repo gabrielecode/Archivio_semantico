@@ -2,10 +2,11 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, Globe, Cloud, Plus} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
+import {GraphTab} from './components/GraphTab';
 import {EmbedBar} from './components/EmbedBar';
 import {ArchivePicker} from './components/ArchivePicker';
 import GuideContent from './components/GuideContent';
@@ -15,10 +16,10 @@ import {useTranslation} from './utils/i18n';
 import {useDriveBackup} from './utils/useDriveBackup';
 import {DriveBackupDialog} from './components/DriveBackupDialog';
 
-export default function App({user, onLogout}: {user: {id: string, name: string, email?: string}, onLogout: () => void}) {
+export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, name: string, email?: string}, onLogout: () => void, onOpenAdmin?: () => void}) {
     const {lang, setLang, t} = useTranslation();
     const [currentUser] = useState(user);
-    const [tab, setTab] = useState<'ricerca' | 'schede' | 'campi'>('ricerca');
+    const [tab, setTab] = useState<'ricerca' | 'schede' | 'campi' | 'graph'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
     const [archiveId, setArchiveId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -204,6 +205,11 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                                         <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowGuideModal(true); setShowMenu(false);}}><HelpCircle size={16} className="mr-2" />{t('guide')}</Button>
                                         <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }}><Globe size={16} className="mr-2" />{lang === 'it' ? 'Deutsch' : 'Italiano'}</Button>
                                     </div>
+                                    {onOpenAdmin && (
+                                        <Button variant="ghost" className="w-full justify-start py-2.5 text-emerald-700 font-semibold" onClick={() => {onOpenAdmin(); setShowMenu(false);}}>
+                                            <Shield size={16} className="mr-2" /> Area Admin
+                                        </Button>
+                                    )}
                                     <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}}><Cloud size={16} className="mr-2" />{t('driveBackupMenu')}</Button>
                                     <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowTour(true); setShowMenu(false);}}><HelpCircle size={16} className="mr-2" />{t('redoTour')}</Button>
                                     <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} className="mr-2" />{t('logout')}</Button>
@@ -271,6 +277,12 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                         <Database size={18} /> Schede ({archive.records.length})
                     </button>
                     <button 
+                        onClick={() => setTab('graph')} 
+                        className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'graph' ? 'bg-white border-x border-t border-stone-200 text-amber-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
+                    >
+                        <Network size={18} /> Grafico
+                    </button>
+                    <button 
                         onClick={() => setTab('campi')} 
                         className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'campi' ? 'bg-white border-x border-t border-stone-200 text-emerald-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
                     >
@@ -282,6 +294,7 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
             <main id="main" className="max-w-6xl mx-auto p-4 sm:p-6">
                 <div role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} /></div>
                 <div role="tabpanel" className={tab === 'schede' ? '' : 'hidden'}><DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} /></div>
+                <div role="tabpanel" className={tab === 'graph' ? '' : 'hidden'}><GraphTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} /></div>
                 <div role="tabpanel" className={tab === 'campi' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>
             </main>
 
@@ -300,6 +313,13 @@ export default function App({user, onLogout}: {user: {id: string, name: string, 
                 >
                     <Database size={20} />
                     <span>Schede</span>
+                </button>
+                <button 
+                    onClick={() => setTab('graph')} 
+                    className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium rounded-xl min-h-[48px] ${tab === 'graph' ? 'text-amber-700 bg-amber-50 font-bold' : 'text-stone-600'}`}
+                >
+                    <Network size={20} />
+                    <span>Grafico</span>
                 </button>
                 <button 
                     onClick={() => setTab('campi')} 

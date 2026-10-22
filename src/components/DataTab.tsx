@@ -3,6 +3,9 @@ import {Archive, Rec} from '../types';
 import {Button, Badge, Field, inputCls, EmptyState} from './ui';
 import {Plus, ChevronLeft, Save, Trash2, Copy, Table as TableIcon, FileText, ChevronRight, SkipBack, SkipForward} from 'lucide-react';
 import {useTranslation} from '../utils/i18n';
+import {updateRecordOutlinks} from '../utils/parser';
+import {WikiContent} from './WikiContent';
+import {LinkPanel} from './LinkPanel';
 
 export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog}: {
   archive: Archive, 
@@ -51,12 +54,16 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
             setSelectedId(archive.records[0].id);
             return;
         }
+        const tipo = archive.schema.tipi[0] || '';
         const newRec: Rec = {
             id: crypto.randomUUID(),
             titolo: '',
-            tipo: archive.schema.tipi[0] || '',
+            tipo,
+            categoria: tipo,
             contenuto: '',
             tags: [],
+            tag: [],
+            outlinks: [],
             fonte: '',
             campi: {},
             creato: new Date().toISOString(),
@@ -81,7 +88,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleSave = () => {
     if (!draft) return;
     const now = new Date().toISOString();
-    const updated = {...draft, modificato: now};
+    const withOutlinks = updateRecordOutlinks(draft);
+    const updated = {...withOutlinks, modificato: now};
     if (isNew) {
         setArchive(a => ({...a, records: [...a.records, updated]}));
     } else {
@@ -90,6 +98,28 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     setDraft(updated);
     setIsNew(false);
     setDirty(true);
+  };
+
+  const handleCreateRecordFromWiki = (title: string) => {
+    const newRec: Rec = {
+        id: crypto.randomUUID(),
+        titolo: title,
+        tipo: archive.schema.tipi[0] || 'Sintomo',
+        categoria: archive.schema.tipi[0] || 'Sintomo',
+        contenuto: `Creato automaticamente tramite link da [[${draft?.titolo || ''}]].\n\n`,
+        tags: [],
+        tag: [],
+        outlinks: [],
+        fonte: '',
+        campi: {},
+        creato: new Date().toISOString(),
+        modificato: new Date().toISOString(),
+        embHash: '',
+        chunks: []
+    };
+    setArchive(a => ({...a, records: [...a.records, newRec]}));
+    setDirty(true);
+    setSelectedId(newRec.id);
   };
 
   const handleNavigate = (direction: number) => {
@@ -218,38 +248,52 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         </div>
 
         {view === 'Modulo' ? (
-            <div className="bg-white p-6 sm:p-8 border border-stone-200 rounded-3xl shadow-sm space-y-6">
-                <Field label={t('titleLabel')}>
-                    <input value={draft.titolo} onChange={e => setDraft({...draft, titolo: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
-                </Field>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <Field label={t('typeLabel')}>
-                        <select value={draft.tipo} onChange={e => setDraft({...draft, tipo: e.target.value})} className={`${inputCls} min-h-[44px] text-base bg-white`}>
-                            {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+            <div className="space-y-6">
+                <div className="bg-white p-6 sm:p-8 border border-stone-200 rounded-3xl shadow-sm space-y-6">
+                    <Field label={t('titleLabel')}>
+                        <input value={draft.titolo} onChange={e => setDraft({...draft, titolo: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
                     </Field>
-                    <Field label={t('sourceLabel')}>
-                        <input value={draft.fonte} onChange={e => setDraft({...draft, fonte: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <Field label={t('typeLabel')}>
+                            <select value={draft.tipo} onChange={e => setDraft({...draft, tipo: e.target.value, categoria: e.target.value})} className={`${inputCls} min-h-[44px] text-base bg-white`}>
+                                {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </Field>
+                        <Field label={t('sourceLabel')}>
+                            <input value={draft.fonte} onChange={e => setDraft({...draft, fonte: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
+                        </Field>
+                    </div>
+                    <Field label={t('tagsLabel')}>
+                        <input value={draft.tags.join(', ')} onChange={e => setDraft({...draft, tags: e.target.value.split(',').map(t => t.trim()), tag: e.target.value.split(',').map(t => t.trim())})} className={`${inputCls} min-h-[44px] text-base`} placeholder={t('tagsPlaceholder')} />
                     </Field>
-                </div>
-                <Field label={t('tagsLabel')}>
-                    <input value={draft.tags.join(', ')} onChange={e => setDraft({...draft, tags: e.target.value.split(',').map(t => t.trim())})} className={`${inputCls} min-h-[44px] text-base`} placeholder={t('tagsPlaceholder')} />
-                </Field>
-                {archive.schema.campi.map(campo => (
-                    <Field key={campo.chiave} label={campo.etichetta}>
-                        {campo.etichetta.toLowerCase().includes('indicazioni') || campo.etichetta.toLowerCase().includes('sinonimi') ? (
-                            <textarea value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[100px] text-base`} />
-                        ) : (
-                            <input value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[44px] text-base`} />
-                        )}
-                    </Field>
-                ))}
-                <Field label={t('contentLabel')}>
-                    <textarea value={draft.contenuto} onChange={e => setDraft({...draft, contenuto: e.target.value})} className={`${inputCls} min-h-[360px] text-base leading-relaxed`} />
+                    {archive.schema.campi.map(campo => (
+                        <Field key={campo.chiave} label={campo.etichetta}>
+                            {campo.etichetta.toLowerCase().includes('indicazioni') || campo.etichetta.toLowerCase().includes('sinonimi') ? (
+                                <textarea value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[100px] text-base`} />
+                            ) : (
+                                <input value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[44px] text-base`} />
+                            )}
+                        </Field>
+                    ))}
+                    <WikiContent
+                        content={draft.contenuto}
+                        archive={archive}
+                        onSelectRecord={id => setSelectedId(id)}
+                        onCreateRecord={title => handleCreateRecordFromWiki(title)}
+                        editable={true}
+                        onChange={val => setDraft({...draft, contenuto: val})}
+                    />
                     <div className="text-xs text-stone-500 mt-1">
                         {draft.contenuto.length} {t('chars')} - {Math.ceil(draft.contenuto.length / 1700)} {t('estimatedBlocks')}
                     </div>
-                </Field>
+                </div>
+
+                <LinkPanel
+                    archive={archive}
+                    currentRecord={draft}
+                    onSelectRecord={id => setSelectedId(id)}
+                    onCreateRecord={title => handleCreateRecordFromWiki(title)}
+                />
             </div>
         ) : (
             <div className="bg-white border border-stone-200 rounded-3xl shadow-sm overflow-x-auto">
