@@ -14,16 +14,16 @@
       { "id": "immagine_1", "label": "Immagine 1", "type": "image" },
       { "id": "immagine_2", "label": "Immagine 2", "type": "image" },
       { "id": "caratteristica", "label": "Caratteristica", "type": "textarea" },
-      { "id": "azioni_funzioni", "label": "Azioni/Funzioni", "type": "textarea" },
+      { "id": "azioni_funzioni", "label": "Azioni / Funzioni", "type": "textarea" },
       { "id": "indicazioni", "label": "Indicazioni", "type": "textarea" },
       { "id": "controindicazioni", "label": "Controindicazioni", "type": "textarea" },
       { "id": "sintomi", "label": "Sintomi", "type": "list" },
       { "id": "combinazioni", "label": "Combinazioni", "type": "list" },
       { "id": "sec_jy", "label": "Sec. J.Y", "type": "textarea" },
-      { "id": "sec_sida", "label": "Sec SIDA(DDB)", "type": "textarea" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "sec_sida", "label": "Sec SIDA (DDB)", "type": "textarea" },
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
@@ -41,14 +41,14 @@
       { "id": "immagine_1", "label": "Immagine 1", "type": "image" },
       { "id": "immagine_2", "label": "Immagine 2", "type": "image" },
       { "id": "caratteristica", "label": "Caratteristica", "type": "textarea" },
-      { "id": "azioni_funzioni", "label": "Azioni/Funzioni", "type": "textarea" },
+      { "id": "azioni_funzioni", "label": "Azioni / Funzioni", "type": "textarea" },
       { "id": "indicazioni", "label": "Indicazioni", "type": "textarea" },
       { "id": "controindicazioni", "label": "Controindicazioni", "type": "textarea" },
       { "id": "sintomi", "label": "Sintomi", "type": "list" },
       { "id": "combinazioni", "label": "Combinazioni", "type": "list" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
@@ -93,7 +93,7 @@
       { "id": "immagine_1", "label": "Immagine 1", "type": "image" },
       { "id": "immagine_2", "label": "Immagine 2", "type": "image" },
       { "id": "caratteristica", "label": "Caratteristica", "type": "textarea" },
-      { "id": "azioni_funzioni", "label": "Azioni/Funzioni", "type": "textarea" },
+      { "id": "azioni_funzioni", "label": "Azioni / Funzioni", "type": "textarea" },
       { "id": "indicazioni", "label": "Indicazioni", "type": "textarea" },
       { "id": "tecnica", "label": "Tecnica", "type": "textarea" },
       { "id": "durata", "label": "Durata", "type": "text" },
@@ -102,9 +102,9 @@
       { "id": "sintomi", "label": "Sintomi", "type": "list" },
       { "id": "combinazioni", "label": "Combinazioni", "type": "list" },
       { "id": "periodo_anno", "label": "Periodo dell'anno", "type": "text" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
@@ -152,7 +152,7 @@
       { "id": "immagine", "label": "Immagine", "type": "image" },
       { "id": "video", "label": "Video", "type": "video" },
       { "id": "caratteristica", "label": "Caratteristica", "type": "textarea" },
-      { "id": "azioni_funzioni", "label": "Azioni/Funzioni", "type": "textarea" },
+      { "id": "azioni_funzioni", "label": "Azioni / Funzioni", "type": "textarea" },
       { "id": "strumento", "label": "Strumento", "type": "text" },
       { "id": "indicazioni", "label": "Indicazioni", "type": "textarea" },
       { "id": "tecnica", "label": "Tecnica", "type": "textarea" },
@@ -160,9 +160,9 @@
       { "id": "frequenza", "label": "Frequenza", "type": "text" },
       { "id": "controindicazioni", "label": "Controindicazioni", "type": "textarea" },
       { "id": "sintomi", "label": "Sintomi", "type": "list" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
@@ -178,7 +178,7 @@
       { "id": "nome_inglese", "label": "Nome Inglese", "type": "text" },
       { "id": "nome_latino", "label": "Nome Latino", "type": "text" },
       { "id": "caratteristica", "label": "Caratteristica", "type": "textarea" },
-      { "id": "azioni_funzioni", "label": "Azioni/Funzioni", "type": "textarea" },
+      { "id": "azioni_funzioni", "label": "Azioni / Funzioni", "type": "textarea" },
       { "id": "indicazioni", "label": "Indicazioni", "type": "textarea" },
       { "id": "controindicazioni", "label": "Controindicazioni", "type": "textarea" },
       { "id": "tecnica", "label": "Tecnica", "type": "textarea" },
@@ -188,14 +188,14 @@
       { "id": "sintomi", "label": "Sintomi", "type": "list" },
       { "id": "combinazioni", "label": "Combinazioni", "type": "list" },
       { "id": "periodo_anno", "label": "Periodo dell'anno", "type": "text" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
     "id": "patologie",
-    "name": "PATOLOGIE/COSTITUZIONE/SINDROMI (MTC)",
+    "name": "PATOLOGIE / COSTITUZIONE / SINDROMI ENERGETICHE (MTC)",
     "cardColor": "#FF8F00",
     "fieldColor": "#C62828",
     "fields": [
@@ -208,12 +208,12 @@
       { "id": "azione", "label": "Azione", "type": "textarea" },
       { "id": "meccanismo_fisiologico", "label": "Meccanismo fisiologico", "type": "textarea" },
       { "id": "meccanismo_patologico", "label": "Meccanismo patologico", "type": "textarea" },
-      { "id": "pti_mtc", "label": "P.ti sec. MTC", "type": "list" },
-      { "id": "pti_jy", "label": "P.ti sec. JY", "type": "list" },
-      { "id": "pti_sida", "label": "P.ti sec. SIDA", "type": "list" },
-      { "id": "rif_testi_classici", "label": "Rif. testi classici", "type": "textarea" },
-      { "id": "rif_libri", "label": "Rif. libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Rif. dispense", "type": "textarea" }
+      { "id": "pti_mtc", "label": "P.ti da utilizzare sec. MTC", "type": "list" },
+      { "id": "pti_jy", "label": "P.ti da utilizzare sec. JY", "type": "list" },
+      { "id": "pti_sida", "label": "P.ti da utilizzare sec. SIDA", "type": "list" },
+      { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
+      { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
     ]
   },
   {
@@ -251,7 +251,7 @@
   },
   {
     "id": "dinastie",
-    "name": "DINASTIE/STORIA CINA",
+    "name": "DINASTIE / STORIA CINA",
     "cardColor": "#B8860B",
     "fieldColor": "#C62828",
     "fields": [
@@ -264,7 +264,7 @@
   },
   {
     "id": "libri",
-    "name": "LIBRI/BIBLIOGRAFIA/DISPENSE/APPUNTI",
+    "name": "LIBRI / BIBLIOGRAFIA / DISPENSE / APPUNTI",
     "cardColor": "#1A237E",
     "fieldColor": "#C62828",
     "fields": [
@@ -280,15 +280,15 @@
   },
   {
     "id": "medici",
-    "name": "MEDICI/FIGURE STORICHE MCC",
+    "name": "MEDICI / FIGURE STORICHE MCC",
     "cardColor": "#558B2F",
     "fieldColor": "#C62828",
     "fields": [
       { "id": "nome", "label": "Nome", "type": "text", "required": true },
       { "id": "periodo_storico", "label": "Periodo storico", "type": "text" },
-      { "id": "classici_trattati", "label": "Classici/trattati scritti", "type": "textarea" },
+      { "id": "classici_trattati", "label": "Classici / trattati scritti", "type": "textarea" },
       { "id": "scuola_pensiero", "label": "Scuola di pensiero", "type": "text" },
-      { "id": "tecnica_ricetta", "label": "Tecnica/Ricetta utilizzata", "type": "textarea" }
+      { "id": "tecnica_ricetta", "label": "Tecnica / Ricetta utilizzata", "type": "textarea" }
     ]
   },
   {
