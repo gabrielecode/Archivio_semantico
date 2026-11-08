@@ -173,7 +173,10 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                             <Button variant="ghost" onClick={() => setShowArchivePicker(true)} className="min-h-[40px]">{t('archives')}</Button>
                             <Button variant="ghost" onClick={createNewArchive} className="min-h-[40px]">{t('newArchive')}</Button>
                             <Button variant="ghost" onClick={() => { exportArchiveJson(archive); localStorage.setItem('tcm_last_backup_date', new Date().toISOString()); setShowBackupReminder(false); }} className="min-h-[40px]">{t('exportJson')}</Button>
-                            <Button variant="ghost" aria-label="Guida" onClick={() => setShowGuideModal(true)} className="min-h-[40px]"><HelpCircle size={16} /></Button>
+                            <Button variant="ghost" onClick={() => setShowGuideModal(true)} className="min-h-[40px] flex items-center gap-1.5 font-medium">
+                                <HelpCircle size={16} />
+                                <span className="hidden md:inline">{t('instructions')}</span>
+                            </Button>
                             <Button 
                                 variant="ghost" 
                                 onClick={() => setLang(lang === 'it' ? 'de' : 'it')}

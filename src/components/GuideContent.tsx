@@ -29,7 +29,7 @@ export default function GuideContent() {
                 </div>
             </section>
 
-            <section className="space-y-4">
+            <section id="iniziare" className="space-y-4">
                 <h2 className="text-2xl font-serif font-bold text-stone-900 border-b pb-2">{t('guideStartTitle')}</h2>
                 <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm space-y-4">
                     <div className="flex items-start gap-3">
