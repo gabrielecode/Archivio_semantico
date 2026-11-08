@@ -50,28 +50,26 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
               <p className="text-sm text-stone-500">Scegli il modello di scheda da creare</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {templates.map(t => (
               <button
                 key={t.id}
                 onClick={() => setSelectedTemplate(t)}
-                className="group relative bg-white p-5 rounded-3xl border border-stone-200 text-left transition-all hover:border-emerald-500 hover:shadow-xl hover:-translate-y-1"
+                className="group flex items-center gap-4 bg-white p-4 rounded-2xl border border-stone-200 text-left transition-all hover:border-emerald-500 hover:shadow-md hover:-translate-y-0.5"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div 
-                    className="w-12 h-12 rounded-2xl shadow-inner flex items-center justify-center text-white font-bold text-xl" 
-                    style={{ backgroundColor: t.cardColor }}
-                  >
-                    {t.name.charAt(0)}
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                      <ChevronLeft size={16} className="rotate-180" />
-                    </div>
-                  </div>
+                <div 
+                  className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm transition-transform group-hover:scale-105" 
+                  style={{ backgroundColor: t.cardColor }}
+                >
+                  {t.name.charAt(0)}
                 </div>
-                <div className="text-sm font-bold text-stone-900 uppercase tracking-tight mb-1">{t.name}</div>
-                <div className="text-xs text-stone-500 line-clamp-2">Crea una nuova scheda dedicata a {t.name.toLowerCase()} con campi ottimizzati.</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-stone-900 uppercase tracking-tight mb-0.5 truncate">{t.name}</div>
+                  <div className="text-[10px] text-stone-500 line-clamp-1">Nuova scheda {t.name.toLowerCase()}</div>
+                </div>
+                <div className="text-stone-300 group-hover:text-emerald-500 transition-all opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
+                  <ChevronLeft size={16} className="rotate-180" />
+                </div>
               </button>
             ))}
           </div>
