@@ -161,184 +161,177 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
     if (!archive) return <div className="min-h-screen flex items-center justify-center text-stone-800 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua</Button></div>;
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-20 sm:pb-0 text-stone-900 font-sans antialiased">
-            <header className="sticky top-0 bg-white border-b border-stone-200 z-30">
-                <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <Leaf className="text-emerald-700 shrink-0" size={24} />
-                        <input aria-label="Nome archivio" value={archive.nome} onChange={e => updateArchive(a => ({...a, nome: e.target.value}))} className="text-xl font-serif font-semibold border-none bg-transparent truncate max-w-[50vw] focus:outline-none" />
+        <div className="min-h-screen bg-stone-50/50 pb-20 sm:pb-0 text-stone-900 font-sans antialiased">
+            <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-stone-200 z-30">
+                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
+                    {/* Zone 1: Brand */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-9 h-9 bg-emerald-800 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-900/10">
+                            <Leaf size={20} />
+                        </div>
+                        <input 
+                            aria-label="Nome archivio" 
+                            value={archive.nome} 
+                            onChange={e => updateArchive(a => ({...a, nome: e.target.value}))} 
+                            className="text-lg font-bold tracking-tight border-none bg-transparent focus:outline-none w-40 sm:w-64 truncate" 
+                        />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="hidden sm:flex items-center gap-2">
-                            <Button variant="ghost" onClick={() => setShowArchivePicker(true)} className="min-h-[40px]">{t('archives')}</Button>
-                            <Button variant="ghost" onClick={createNewArchive} className="min-h-[40px]">{t('newArchive')}</Button>
-                            <Button variant="ghost" onClick={() => { exportArchiveJson(archive); localStorage.setItem('tcm_last_backup_date', new Date().toISOString()); setShowBackupReminder(false); }} className="min-h-[40px]">{t('exportJson')}</Button>
-                            <Button variant="ghost" onClick={() => setShowGuideModal(true)} className="min-h-[40px] flex items-center gap-1.5 font-medium">
-                                <HelpCircle size={16} />
-                                <span className="hidden md:inline">{t('instructions')}</span>
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                onClick={() => setLang(lang === 'it' ? 'de' : 'it')}
-                                className="flex items-center gap-1 px-3 py-2 border border-stone-200 rounded-xl text-xs font-semibold min-h-[40px]"
-                                aria-label="Cambia lingua"
-                            >
-                                <Globe size={16} className="text-emerald-700" />
-                                <span className="uppercase">{lang}</span>
-                            </Button>
+
+                    {/* Zone 2: Navigation Links */}
+                    <nav className="hidden lg:flex items-center gap-1 bg-stone-100/50 p-1 rounded-2xl">
+                        <button 
+                            onClick={() => setTab('ricerca')} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'ricerca' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                        >
+                            <Search size={16} /> Ricerca
+                        </button>
+                        <button 
+                            onClick={() => setTab('schede')} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'schede' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                        >
+                            <Database size={16} /> Schede ({archive.records.length})
+                        </button>
+                        <button 
+                            onClick={() => setTab('graph')} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'graph' ? 'bg-white text-amber-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                        >
+                            <Network size={16} /> Grafico
+                        </button>
+                        <button 
+                            onClick={() => setTab('campi')} 
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'campi' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                        >
+                            <Settings2 size={16} /> Campi
+                        </button>
+                    </nav>
+
+                    {/* Zone 3: Primary Action / User */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="hidden sm:flex items-center gap-2 mr-2">
+                             <Button variant="ghost" size="sm" onClick={() => setShowArchivePicker(true)}>{t('archives')}</Button>
+                             <Button variant="ghost" size="sm" onClick={() => setShowGuideModal(true)} icon={HelpCircle}>{t('instructions')}</Button>
                         </div>
                         
                         <div className="relative" ref={menuRef}>
-                            <Button variant="ghost" onClick={() => setShowMenu(!showMenu)} className="flex items-center gap-2 min-h-[40px] px-3">
-                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">
+                            <button 
+                                onClick={() => setShowMenu(!showMenu)} 
+                                className="flex items-center gap-2 p-1 pl-3 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors border border-stone-200"
+                            >
+                                <span className="text-xs font-bold text-stone-600 hidden md:block max-w-[100px] truncate">{currentUser.name || currentUser.email}</span>
+                                <div className="w-8 h-8 rounded-full bg-white text-emerald-800 font-bold flex items-center justify-center text-sm shadow-sm border border-stone-200">
                                     {(currentUser.email || currentUser.name || 'U').charAt(0).toUpperCase()}
                                 </div>
-                                <span className="font-medium text-stone-800 truncate max-w-[120px] hidden sm:inline">{currentUser.email || currentUser.name}</span>
-                                <Menu size={18} className="sm:hidden" />
-                            </Button>
+                            </button>
                             {showMenu && (
-                                <div className="absolute right-0 top-full mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl py-2 min-w-[240px] z-40 text-stone-900">
-                                    <div className="px-4 py-2 border-b border-stone-100">
-                                        <p className="font-semibold text-sm text-stone-900 truncate">{currentUser.email || currentUser.name}</p>
+                                <div className="absolute right-0 top-full mt-3 bg-white border border-stone-200 rounded-3xl shadow-2xl py-3 min-w-[260px] z-40 text-stone-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="px-5 py-3 border-b border-stone-100 bg-stone-50/50">
+                                        <p className="font-bold text-sm text-stone-900 truncate">{currentUser.name || 'Utente'}</p>
+                                        <p className="text-xs text-stone-500 truncate">{currentUser.email}</p>
                                     </div>
-                                    <div className="sm:hidden">
-                                        <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}}>{t('archives')}</Button>
-                                        <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {createNewArchive(); setShowMenu(false);}}>{t('newArchive')}</Button>
-                                        <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => { exportArchiveJson(archive); localStorage.setItem('tcm_last_backup_date', new Date().toISOString()); setShowMenu(false); setShowBackupReminder(false); }}>{t('exportJson')}</Button>
-                                        <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowGuideModal(true); setShowMenu(false);}}><HelpCircle size={16} className="mr-2" />{t('guide')}</Button>
-                                        <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }}><Globe size={16} className="mr-2" />{lang === 'it' ? 'Deutsch' : 'Italiano'}</Button>
+                                    <div className="p-2 space-y-1">
+                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {createNewArchive(); setShowMenu(false);}} icon={Plus}>{t('newArchive')}</Button>
+                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { exportArchiveJson(archive); setShowMenu(false); }} icon={Cloud}>{t('exportJson')}</Button>
+                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}} icon={Cloud}>{t('driveBackupMenu')}</Button>
+                                        <div className="h-px bg-stone-100 my-1 mx-2" />
+                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }} icon={Globe}>{lang === 'it' ? 'Lingua: Italiano' : 'Sprache: Deutsch'}</Button>
+                                        {onOpenAdmin && (
+                                            <Button variant="ghost" className="w-full justify-start text-sm text-emerald-700 font-bold" onClick={() => {onOpenAdmin(); setShowMenu(false);}} icon={Shield}>Area Admin</Button>
+                                        )}
+                                        <div className="h-px bg-stone-100 my-1 mx-2" />
+                                        <Button variant="ghost" className="w-full justify-start text-sm text-red-600 font-bold" onClick={() => {handleLogout(); setShowMenu(false);}} icon={LogOut}>{t('logout')}</Button>
                                     </div>
-                                    {onOpenAdmin && (
-                                        <Button variant="ghost" className="w-full justify-start py-2.5 text-emerald-700 font-semibold" onClick={() => {onOpenAdmin(); setShowMenu(false);}}>
-                                            <Shield size={16} className="mr-2" /> Area Admin
-                                        </Button>
-                                    )}
-                                    <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}}><Cloud size={16} className="mr-2" />{t('driveBackupMenu')}</Button>
-                                    <Button variant="ghost" className="w-full justify-start py-2.5" onClick={() => {setShowTour(true); setShowMenu(false);}}><HelpCircle size={16} className="mr-2" />{t('redoTour')}</Button>
-                                    <Button variant="ghost" className="w-full justify-start text-red-600 py-2.5" onClick={() => {handleLogout(); setShowMenu(false);}}><LogOut size={16} className="mr-2" />{t('logout')}</Button>
                                 </div>
                             )}
                         </div>
+                        <button className="lg:hidden p-2 text-stone-600" onClick={() => setTab(tab === 'ricerca' ? 'schede' : 'ricerca')}>
+                            <Menu size={24} />
+                        </button>
                     </div>
                 </div>
 
-                <div className="max-w-6xl mx-auto px-4 flex justify-between items-center text-sm py-1.5 bg-stone-50 border-t border-stone-100">
-                    <div className={saveState==='error'?'text-red-600 font-medium':''}>
-                        {saveState==='saving' ? t('saving') : 
-                         dirty ? <span className="text-amber-700 font-medium">{t('unsavedChangesPending')}</span> : 
-                         saveState==='saved' ? <span className="text-emerald-700 font-semibold">Salvato ✓ {lastSavedTime}</span> : 
-                         <span>Salvato</span>}
-                        {saveState==='error' && <Button size="sm" variant="ghost" onClick={flush}>{t('retry')}</Button>}
+                {/* Sub-header status bar */}
+                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-[11px] h-8 bg-stone-50/80 border-t border-stone-100">
+                    <div className="flex items-center gap-4">
+                        <div className={saveState==='error'?'text-red-600 font-bold':''}>
+                            {saveState==='saving' ? t('saving') : 
+                             dirty ? <span className="text-amber-700 font-bold uppercase tracking-wider">{t('unsavedChangesPending')}</span> : 
+                             saveState==='saved' ? <span className="text-emerald-700 font-bold uppercase tracking-wider">Sincronizzato {lastSavedTime}</span> : 
+                             <span className="uppercase tracking-wider opacity-50">Pronto</span>}
+                        </div>
+                        {saveState==='error' && <button onClick={flush} className="text-red-700 font-bold underline ml-2 uppercase tracking-wider">Riprova</button>}
                     </div>
-                    <div className="hidden sm:block text-stone-500">
+                    <div className="text-stone-400 font-medium uppercase tracking-widest">
                         {new Date(archive.modificato).toLocaleString(lang === 'de' ? 'de-DE' : 'it-IT')}
                     </div>
                 </div>
 
                 {conflict && (
-                    <div className="bg-amber-100 border-b border-amber-300 p-3 text-center text-sm font-medium">
-                        {t('conflictMsg')}
-                        <Button variant="ghost" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>{t('reload')}</Button>
-                        <Button variant="ghost" size="sm" onClick={() => setConflict(false)}>{t('overwrite')}</Button>
+                    <div className="bg-amber-50 border-b border-amber-200 py-2 px-6 flex items-center justify-center gap-4 text-xs font-bold text-amber-900">
+                        <span>{t('conflictMsg')}</span>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={async () => { const a = await storeRef.current!.get(archiveId!); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setDirty(false); setConflict(false); }}>{t('reload')}</Button>
+                            <Button variant="primary" size="sm" onClick={() => setConflict(false)}>{t('overwrite')}</Button>
+                        </div>
                     </div>
                 )}
-
-                {showBackupReminder && (
-                    <div className="bg-amber-50 border-b border-amber-200 p-3 text-center text-sm font-medium flex items-center justify-center gap-3 text-amber-900">
-                        <span>{t('backupReminder')}</span>
-                        <Button size="sm" onClick={() => { exportArchiveJson(archive); localStorage.setItem('tcm_last_backup_date', new Date().toISOString()); setShowBackupReminder(false); }} className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
-                            {t('makeBackupNow')}
-                        </Button>
-                    </div>
-                )}
-
-                {driveBackup.suspended && (
-                    <div className="bg-amber-100 border-b border-amber-300 p-3 text-center text-sm font-semibold flex items-center justify-center gap-3 text-amber-900">
-                        <span>{t('backupInPause')}</span>
-                        <Button size="sm" onClick={driveBackup.connect} className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold">
-                            Collega Google Drive
-                        </Button>
-                    </div>
-                )}
-
-                <EmbedBar archive={archive} user={currentUser} onNeedLogin={() => {}} onApply={(results: any) => {
-                    updateArchive(a => ({...a, records: a.records.map(r => { const x = results.find((z: any) => z.id === r.id); return x && calculateEmbHash(r) === x.hash ? {...r, chunks: x.chunks, embHash: x.hash} : r; })}));
-                }} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />
-
-                {/* Desktop Tabs */}
-                <div className="hidden sm:flex max-w-6xl mx-auto px-4 border-t border-stone-100 gap-2 pt-2">
-                    <button 
-                        onClick={() => setTab('ricerca')} 
-                        className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'ricerca' ? 'bg-white border-x border-t border-stone-200 text-emerald-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
-                    >
-                        <Search size={18} /> Cerca
-                    </button>
-                    <button 
-                        onClick={() => setTab('schede')} 
-                        className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'schede' ? 'bg-white border-x border-t border-stone-200 text-emerald-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
-                    >
-                        <Database size={18} /> Schede ({archive.records.length})
-                    </button>
-                    <button 
-                        onClick={() => setTab('graph')} 
-                        className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'graph' ? 'bg-white border-x border-t border-stone-200 text-amber-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
-                    >
-                        <Network size={18} /> Grafico
-                    </button>
-                    <button 
-                        onClick={() => setTab('campi')} 
-                        className={`px-6 py-3 font-medium text-base rounded-t-xl transition-colors flex items-center gap-2 ${tab === 'campi' ? 'bg-white border-x border-t border-stone-200 text-emerald-800 font-semibold shadow-sm' : 'text-stone-600 hover:bg-stone-100'}`}
-                    >
-                        <Settings2 size={18} /> Campi
-                    </button>
-                </div>
             </header>
             
-            <main id="main" className="max-w-6xl mx-auto p-4 sm:p-6">
-                <div role="tabpanel" className={tab === 'ricerca' ? '' : 'hidden'}><SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} updateArchive={updateArchive} /></div>
-                <div role="tabpanel" className={tab === 'schede' ? '' : 'hidden'}><DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} /></div>
-                <div role="tabpanel" className={tab === 'graph' ? '' : 'hidden'}><GraphTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} /></div>
-                <div role="tabpanel" className={tab === 'campi' ? '' : 'hidden'}><StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} /></div>
+            <main id="main" className="max-w-7xl mx-auto px-6 py-8">
+                <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'ricerca' ? '' : 'hidden'}`}>
+                    <SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} updateArchive={updateArchive} />
+                </div>
+                <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'schede' ? '' : 'hidden'}`}>
+                    <DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} />
+                </div>
+                <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'graph' ? '' : 'hidden'}`}>
+                    <GraphTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} />
+                </div>
+                <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'campi' ? '' : 'hidden'}`}>
+                    <StructureTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} />
+                </div>
             </main>
 
             {/* Mobile Fixed Bottom Navigation */}
-            <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-stone-200 flex justify-around p-2 z-30 shadow-lg" aria-label="Navigazione mobile">
+            <nav className="sm:hidden fixed bottom-6 inset-x-6 h-16 bg-white/90 backdrop-blur-xl border border-stone-200 flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
                 <button 
                     onClick={() => setTab('ricerca')} 
-                    className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium rounded-xl min-h-[48px] ${tab === 'ricerca' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'text-stone-600'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Search size={20} />
-                    <span>Cerca</span>
+                    <span className="text-[10px] font-bold mt-1">Cerca</span>
                 </button>
                 <button 
                     onClick={() => setTab('schede')} 
-                    className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium rounded-xl min-h-[48px] ${tab === 'schede' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'text-stone-600'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Database size={20} />
-                    <span>Schede</span>
+                    <span className="text-[10px] font-bold mt-1">Schede</span>
                 </button>
                 <button 
                     onClick={() => setTab('graph')} 
-                    className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium rounded-xl min-h-[48px] ${tab === 'graph' ? 'text-amber-700 bg-amber-50 font-bold' : 'text-stone-600'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'graph' ? 'text-amber-700 bg-amber-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Network size={20} />
-                    <span>Grafico</span>
+                    <span className="text-[10px] font-bold mt-1">Grafico</span>
                 </button>
                 <button 
                     onClick={() => setTab('campi')} 
-                    className={`flex flex-col items-center justify-center flex-1 py-2 text-xs font-medium rounded-xl min-h-[48px] ${tab === 'campi' ? 'text-emerald-700 bg-emerald-50 font-bold' : 'text-stone-600'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Settings2 size={20} />
-                    <span>Campi</span>
+                    <span className="text-[10px] font-bold mt-1">Campi</span>
                 </button>
             </nav>
 
-            <footer className="text-center p-8 text-sm text-stone-500 border-t border-stone-200 mt-12 bg-white hidden sm:block">
-                <p>{t('disclaimerConsultation')}</p>
-                <p className="text-xs mb-3">{t('disclaimerSimilarity')}</p>
-                <p className="text-sm font-medium text-stone-700">
-                    {t('createdBylabel')} <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
-                </p>
+            <footer className="text-center p-12 text-sm text-stone-400 border-t border-stone-100 mt-20 bg-white hidden sm:block">
+                <div className="max-w-2xl mx-auto space-y-4">
+                    <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
+                    <p className="text-[11px] opacity-60">{t('disclaimerSimilarity')}</p>
+                    <div className="pt-4 flex items-center justify-center gap-2 text-stone-600 font-medium">
+                        <span>{t('createdBylabel')}</span>
+                        <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-800 hover:text-emerald-600 transition-colors font-bold">Connect & Create</a>
+                    </div>
+                </div>
             </footer>
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -346,24 +339,33 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
             {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
             
             {showGuideModal && (
-                <Modal title={t('guideTitle')} onClose={() => setShowGuideModal(false)} className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                <Modal title={t('guideTitle')} onClose={() => setShowGuideModal(false)} className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <GuideContent />
                 </Modal>
             )}
 
             {showTour && (
-                <Modal title={t('tourTitle')} onClose={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }} className="max-w-lg">
-                    <div className="space-y-4 text-stone-800 text-base">
-                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2">
-                            <p className="font-semibold">{t('tourStep1')}</p>
-                            <p className="font-semibold">{t('tourStep2')}</p>
-                            <p className="font-semibold">{t('tourStep3')}</p>
+                <Modal title={t('tourTitle')} onClose={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }} className="max-w-xl">
+                    <div className="space-y-6 text-stone-800 text-base">
+                        <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 space-y-3">
+                            <div className="flex gap-3">
+                                <div className="w-6 h-6 bg-emerald-600 text-white rounded-full flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                                <p className="font-semibold text-stone-900">{t('tourStep1')}</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="w-6 h-6 bg-emerald-600 text-white rounded-full flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                                <p className="font-semibold text-stone-900">{t('tourStep2')}</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="w-6 h-6 bg-emerald-600 text-white rounded-full flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                                <p className="font-semibold text-stone-900">{t('tourStep3')}</p>
+                            </div>
                         </div>
                         <div className="flex justify-between items-center pt-2">
-                            <Button variant="secondary" onClick={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }}>
+                            <Button variant="ghost" onClick={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }}>
                                 {t('dontShowAgain')}
                             </Button>
-                            <Button onClick={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }}>
+                            <Button size="lg" onClick={() => { setShowTour(false); localStorage.setItem('tcm_tour_dismissed', 'true'); }}>
                                 Inizia subito
                             </Button>
                         </div>
@@ -388,4 +390,3 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
         </div>
     );
 }
-

@@ -1,68 +1,76 @@
 import React, {useState, useEffect, useRef} from 'react';
-import {Loader2, AlertCircle, CheckCircle} from 'lucide-react';
+import {Loader2, AlertCircle, CheckCircle, X} from 'lucide-react';
 
-export const Button = ({children, variant = 'primary', loading, icon: Icon, className = '', disabled, type = 'button', ...props}: any) => {
+export const Button = ({children, variant = 'primary', size = 'md', loading, icon: Icon, className = '', disabled, type = 'button', ...props}: any) => {
     const variants = {
-        primary: 'bg-emerald-700 text-white hover:bg-emerald-800',
-        secondary: 'bg-stone-200 text-stone-800 hover:bg-stone-300',
-        danger: 'bg-red-600 text-white hover:bg-red-700',
-        ghost: 'bg-transparent text-stone-700 hover:bg-stone-100'
+        primary: 'bg-emerald-800 text-white hover:bg-emerald-900 shadow-sm',
+        secondary: 'bg-white text-stone-800 border border-stone-200 hover:bg-stone-50 shadow-sm',
+        danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
+        ghost: 'bg-transparent text-stone-600 hover:bg-stone-100',
+        outline: 'bg-transparent text-emerald-800 border border-emerald-200 hover:bg-emerald-50'
     };
+    
+    const sizes = {
+        sm: 'px-3 py-1.5 text-xs min-h-[32px]',
+        md: 'px-4 py-2 text-sm min-h-[42px]',
+        lg: 'px-6 py-3 text-base min-h-[50px]'
+    };
+
     return (
         <button 
             type={type} 
             {...props} 
             disabled={disabled || loading}
-            className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 min-h-[40px] focus-visible:ring-2 ring-emerald-700 ${variants[variant as keyof typeof variants]} disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+            className={`rounded-xl flex items-center justify-center gap-2 font-medium transition-all focus-visible:ring-2 ring-emerald-700/30 ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant as keyof typeof variants]} ${sizes[size as keyof typeof sizes]} ${className}`}
         >
-            {loading && <Loader2 className="animate-spin" size={16} />}
-            {Icon && !loading && <Icon size={16} />}
+            {loading && <Loader2 className="animate-spin" size={18} />}
+            {Icon && !loading && <Icon size={18} />}
             {children}
         </button>
     );
 };
 
-export const inputCls = 'w-full p-2 border border-stone-300 rounded-lg bg-white focus:border-emerald-700 focus:ring-1 ring-emerald-700';
+export const inputCls = 'w-full px-4 py-3 border border-stone-200 rounded-xl bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-emerald-700 focus:ring-4 ring-emerald-700/10 transition-all text-sm';
 
 export const Field = ({label, hint, children}: {label: string, hint?: string, children: React.ReactNode}) => (
-    <label className="block space-y-1">
-        <span className="text-sm font-medium text-stone-700">{label}</span>
-        {hint && <span className="block text-xs text-stone-500">{hint}</span>}
+    <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-stone-800 ml-1">{label}</label>
         {children}
-    </label>
+        {hint && <span className="block text-xs text-stone-500 ml-1">{hint}</span>}
+    </div>
 );
 
 export const Modal = ({title, children, onClose, footer, hideClose, className = 'max-w-lg'}: any) => {
     const modalRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        const prev = document.activeElement as HTMLElement;
-        const focusable = modalRef.current?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusable && focusable.length > 0) (focusable[0] as HTMLElement).focus();
-        
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
-            if (e.key === 'Tab') {
-                const focusable = modalRef.current?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-                if (!focusable || focusable.length === 0) return;
-                const first = focusable[0] as HTMLElement;
-                const last = focusable[focusable.length - 1] as HTMLElement;
-                if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
-                else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
-            }
         };
         window.addEventListener('keydown', handleKeyDown);
-        return () => { window.removeEventListener('keydown', handleKeyDown); prev?.focus(); };
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div ref={modalRef} className={`bg-white p-6 rounded-xl shadow-xl w-full ${className}`} onClick={e => e.stopPropagation()}>
-                <h2 id="modal-title" className="text-xl font-serif mb-4">{title}</h2>
-                {children}
-                {(footer || !hideClose) && (
-                    <div className="flex justify-end gap-2 mt-6">
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200" onClick={onClose} role="dialog" aria-modal="true">
+            <div 
+                ref={modalRef} 
+                className={`bg-white rounded-3xl shadow-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200 ${className}`} 
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-stone-900 leading-tight">{title}</h2>
+                    {!hideClose && (
+                        <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400 hover:text-stone-600">
+                            <X size={20} />
+                        </button>
+                    )}
+                </div>
+                <div className="p-6">
+                    {children}
+                </div>
+                {footer && (
+                    <div className="px-6 py-4 bg-stone-50 border-t border-stone-100 flex justify-end gap-3">
                         {footer}
-                        {!hideClose && <Button onClick={onClose} variant="ghost">Chiudi</Button>}
                     </div>
                 )}
             </div>
@@ -71,38 +79,43 @@ export const Modal = ({title, children, onClose, footer, hideClose, className = 
 };
 
 export const ConfirmDialog = ({title, message, confirmLabel='Conferma', danger, onConfirm, onCancel}: any) => (
-    <Modal title={title} onClose={onCancel} hideClose>
-        <p className="text-stone-600">{message}</p>
-        <div className="flex justify-end gap-2 mt-6">
+    <Modal title={title} onClose={onCancel} hideClose className="max-w-md" footer={
+        <>
             <Button variant="ghost" onClick={onCancel}>Annulla</Button>
             <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirmLabel}</Button>
-        </div>
+        </>
+    }>
+        <p className="text-stone-600 leading-relaxed">{message}</p>
     </Modal>
 );
 
 export const Toast = ({message, type, onClose}: {message: string, type: 'success' | 'error', onClose: () => void}) => {
-    const onCloseRef = useRef(onClose);
-    onCloseRef.current = onClose;
-    useEffect(() => { const timer = setTimeout(() => onCloseRef.current(), 4000); return () => clearTimeout(timer); }, []);
+    useEffect(() => { const timer = setTimeout(onClose, 4000); return () => clearTimeout(timer); }, [onClose]);
     return (
-        <div role={type === 'error' ? 'alert' : 'status'} className={`fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 p-4 rounded-lg shadow-lg flex items-center gap-2 ${type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-            {type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-            {message}
+        <div role={type === 'error' ? 'alert' : 'status'} className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-10 duration-300 z-[100] min-w-[300px] ${type === 'success' ? 'bg-white border-l-4 border-emerald-500 text-stone-800' : 'bg-white border-l-4 border-red-500 text-stone-800'}`}>
+            <div className={`p-2 rounded-full ${type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                {type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+            </div>
+            <div className="flex-1 font-medium">{message}</div>
+            <button onClick={onClose} className="text-stone-400 hover:text-stone-600 p-1">
+                <X size={16} />
+            </button>
         </div>
     );
 };
 
 export const Badge = ({type}: {type: string}) => {
-    const colors = ['bg-red-100 text-red-800', 'bg-blue-100 text-blue-800', 'bg-green-100 text-green-800', 'bg-yellow-100 text-yellow-800', 'bg-purple-100 text-purple-800', 'bg-pink-100 text-pink-800', 'bg-indigo-100 text-indigo-800', 'bg-teal-100 text-teal-800'];
-    const index = [...type].reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-    return <span title={type} className={`px-2 py-0.5 rounded text-xs ${colors[index]}`}>{type}</span>;
+    return <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-600 border border-stone-200">{type}</span>;
 };
 
 export const EmptyState = ({icon: Icon, title, text, action}: any) => (
-    <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-stone-200 rounded-xl">
-        <Icon size={48} className="text-stone-400 mb-4" />
-        <h3 className="text-lg font-semibold text-stone-900">{title}</h3>
-        <p className="text-stone-600 mb-4">{text}</p>
-        {action && <Button onClick={action.onClick}>{action.label}</Button>}
+    <div className="flex flex-col items-center justify-center p-12 text-center bg-white border border-stone-200 rounded-3xl shadow-sm">
+        <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mb-6">
+            <Icon size={40} className="text-stone-300" />
+        </div>
+        <h3 className="text-xl font-bold text-stone-900 mb-2">{title}</h3>
+        <p className="text-stone-500 mb-8 max-w-sm mx-auto leading-relaxed">{text}</p>
+        {action && <Button size="lg" onClick={action.onClick}>{action.label}</Button>}
     </div>
 );
+
