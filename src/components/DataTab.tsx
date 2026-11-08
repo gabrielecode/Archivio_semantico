@@ -6,6 +6,12 @@ import {useTranslation} from '../utils/i18n';
 import {updateRecordOutlinks} from '../utils/parser';
 import {WikiContent} from './WikiContent';
 import {LinkPanel} from './LinkPanel';
+import {DynamicForm} from './DynamicForm';
+import {CardPreview} from './CardPreview';
+import {Template} from '../types';
+import templatesData from '../templates.json';
+
+const templates = templatesData as Template[];
 
 export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog}: {
   archive: Archive, 
@@ -23,6 +29,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const [isNew, setIsNew] = useState(false);
   const [sortField, setSortField] = useState<keyof Rec>('modificato');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [editing, setEditing] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
   const filteredRecords = useMemo(() => {
     let recs = [...archive.records].filter(r => 
@@ -97,6 +105,36 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     }
     setDraft(updated);
     setIsNew(false);
+    setEditing(false);
+    setDirty(true);
+  };
+
+  const handleTemplateSave = (campi: any, template: Template) => {
+    if (!draft) return;
+    const now = new Date().toISOString();
+    // Use the primary name field as the title if available
+    const nameFieldId = template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id;
+    const titolo = campi[nameFieldId || ''] || draft.titolo || template.name;
+    
+    const updated: Rec = {
+      ...draft,
+      titolo,
+      tipo: template.id,
+      categoria: template.name,
+      campi,
+      modificato: now
+    };
+
+    const withOutlinks = updateRecordOutlinks(updated);
+    if (isNew) {
+      setArchive(a => ({...a, records: [...a.records, withOutlinks]}));
+    } else {
+      setArchive(a => ({...a, records: a.records.map(r => r.id === updated.id ? withOutlinks : r)}));
+    }
+    
+    setDraft(withOutlinks);
+    setIsNew(false);
+    setEditing(false);
     setDirty(true);
   };
 
@@ -182,6 +220,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
   const createNew = () => {
     setSelectedId(null);
+    setEditing(true);
+    setTemplateId(null);
   };
 
   const handleDuplicate = () => {
@@ -248,52 +288,55 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         </div>
 
         {view === 'Modulo' ? (
-            <div className="space-y-6">
-                <div className="bg-white p-6 sm:p-8 border border-stone-200 rounded-3xl shadow-sm space-y-6">
-                    <Field label={t('titleLabel')}>
-                        <input value={draft.titolo} onChange={e => setDraft({...draft, titolo: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
-                    </Field>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <Field label={t('typeLabel')}>
-                            <select value={draft.tipo} onChange={e => setDraft({...draft, tipo: e.target.value, categoria: e.target.value})} className={`${inputCls} min-h-[44px] text-base bg-white`}>
-                                {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </Field>
-                        <Field label={t('sourceLabel')}>
-                            <input value={draft.fonte} onChange={e => setDraft({...draft, fonte: e.target.value})} className={`${inputCls} min-h-[44px] text-base`} />
-                        </Field>
-                    </div>
-                    <Field label={t('tagsLabel')}>
-                        <input value={draft.tags.join(', ')} onChange={e => setDraft({...draft, tags: e.target.value.split(',').map(t => t.trim()), tag: e.target.value.split(',').map(t => t.trim())})} className={`${inputCls} min-h-[44px] text-base`} placeholder={t('tagsPlaceholder')} />
-                    </Field>
-                    {archive.schema.campi.map(campo => (
-                        <Field key={campo.chiave} label={campo.etichetta}>
-                            {campo.etichetta.toLowerCase().includes('indicazioni') || campo.etichetta.toLowerCase().includes('sinonimi') ? (
-                                <textarea value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[100px] text-base`} />
-                            ) : (
-                                <input value={draft.campi[campo.chiave] || ''} onChange={e => setDraft({...draft, campi: {...draft.campi, [campo.chiave]: e.target.value}})} className={`${inputCls} min-h-[44px] text-base`} />
-                            )}
-                        </Field>
-                    ))}
-                    <WikiContent
-                        content={draft.contenuto}
-                        archive={archive}
-                        onSelectRecord={id => setSelectedId(id)}
-                        onCreateRecord={title => handleCreateRecordFromWiki(title)}
-                        editable={true}
-                        onChange={val => setDraft({...draft, contenuto: val})}
-                    />
-                    <div className="text-xs text-stone-500 mt-1">
-                        {draft.contenuto.length} {t('chars')} - {Math.ceil(draft.contenuto.length / 1700)} {t('estimatedBlocks')}
-                    </div>
+            <div className="grid lg:grid-cols-2 gap-8 items-start">
+                <div className="space-y-6">
+                    {editing ? (
+                      <DynamicForm 
+                        initialValues={draft} 
+                        templateId={templateId || undefined}
+                        onSave={handleTemplateSave}
+                        onCancel={() => {
+                          setEditing(false);
+                          if (isNew) setSelectedId(filteredRecords[0]?.id || null);
+                        }}
+                      />
+                    ) : (
+                      <div className="space-y-6">
+                        <CardPreview record={draft} />
+                        <div className="flex justify-center gap-2">
+                          <Button variant="secondary" onClick={() => setEditing(true)} className="w-full sm:w-auto">
+                            Modifica Scheda
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                 </div>
 
-                <LinkPanel
-                    archive={archive}
-                    currentRecord={draft}
-                    onSelectRecord={id => setSelectedId(id)}
-                    onCreateRecord={title => handleCreateRecordFromWiki(title)}
-                />
+                <div className="space-y-6">
+                    {!editing && (
+                      <>
+                        <WikiContent
+                            content={draft.contenuto}
+                            archive={archive}
+                            onSelectRecord={id => setSelectedId(id)}
+                            onCreateRecord={title => handleCreateRecordFromWiki(title)}
+                            editable={true}
+                            onChange={val => {
+                              const next = {...draft, contenuto: val};
+                              setDraft(next);
+                              setArchive(a => ({...a, records: a.records.map(r => r.id === draft.id ? next : r)}));
+                              setDirty(true);
+                            }}
+                        />
+                        <LinkPanel
+                            archive={archive}
+                            currentRecord={draft}
+                            onSelectRecord={id => setSelectedId(id)}
+                            onCreateRecord={title => handleCreateRecordFromWiki(title)}
+                        />
+                      </>
+                    )}
+                </div>
             </div>
         ) : (
             <div className="bg-white border border-stone-200 rounded-3xl shadow-sm overflow-x-auto">

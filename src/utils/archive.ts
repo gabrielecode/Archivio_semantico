@@ -1,12 +1,13 @@
 import {Archive, Rec, EMB_MODEL, EMB_DIM, ARCHIVE_VERSION} from '../types';
 import * as XLSX from 'xlsx';
+import templatesData from '../templates.json';
 
 export const DEFAULT_CAMPI = [
-    {chiave:'pinyin',etichetta:'Pinyin / Nome cinese'},
-    {chiave:'sinonimi',etichetta:'Sinonimi'},
-    {chiave:'natura',etichetta:'Natura / Categoria'},
-    {chiave:'indicazioni',etichetta:'Indicazioni'},
-    {chiave:'controindicazioni',etichetta:'Controindicazioni'}
+  {chiave:'pinyin',etichetta:'Pinyin / Nome cinese'},
+  {chiave:'sinonimi',etichetta:'Sinonimi'},
+  {chiave:'natura',etichetta:'Natura / Categoria'},
+  {chiave:'indicazioni',etichetta:'Indicazioni'},
+  {chiave:'controindicazioni',etichetta:'Controindicazioni'}
 ];
 
 export function newArchive(nome: string): Archive {
@@ -19,7 +20,8 @@ export function newArchive(nome: string): Archive {
     dim: EMB_DIM,
     schema: {
         campi: DEFAULT_CAMPI,
-        tipi: ['Sintomo', 'Punto di agopuntura', 'Meridiano', 'Erba/Formula', 'Sindrome', 'Teoria/Concetto', 'Documento', 'Nota']
+        tipi: ['Sintomo', 'Punto di agopuntura', 'Meridiano', 'Erba/Formula', 'Sindrome', 'Teoria/Concetto', 'Documento', 'Nota'],
+        templates: templatesData as any
     },
     records: []
   };
@@ -72,24 +74,47 @@ function isValidISO(date: any) {
 }
 
 function normalizeRecord(r: any): Rec {
-    const tipo = r.tipo || r.categoria || 'Sintomo';
-    const categoria = r.categoria || tipo;
-    const rawTags = Array.isArray(r.tags) ? r.tags : (Array.isArray(r.tag) ? r.tag : []);
+    const tipo = r.tipo || r.categoria || r.Tipo || 'Sintomo';
+    const categoria = r.categoria || r.Categoria || tipo;
+    const rawTags = Array.isArray(r.tags) ? r.tags : (typeof r.Tags === 'string' ? r.Tags.split(';') : (Array.isArray(r.tag) ? r.tag : []));
     const tags = rawTags.map((t: any) => String(t).trim()).filter((t: string) => t !== '');
     const outlinks = Array.isArray(r.outlinks) ? r.outlinks.map((o: any) => String(o).trim()).filter((o: string) => o !== '') : [];
+    
+    // Improved campi normalization for Excel/JSON imports
+    const campi: Record<string, any> = {};
+    const rawCampi = r.campi || {};
+    
+    // If coming from Excel, fields might be prefixed with "campo_" or named directly by label
+    Object.entries(r).forEach(([key, value]) => {
+        if (key.startsWith('campo_')) {
+            const fieldId = key.replace('campo_', '');
+            if (typeof value === 'string' && (fieldId.includes('immagine') || fieldId.includes('image') || fieldId.includes('video') || fieldId.includes('lista') || fieldId.includes('sintomi') || fieldId.includes('combinazioni'))) {
+                const separator = fieldId.includes('immagine') || fieldId.includes('image') || fieldId.includes('video') ? '|' : ';';
+                campi[fieldId] = value.split(separator).map(s => s.trim()).filter(Boolean);
+            } else {
+                campi[fieldId] = value;
+            }
+        }
+    });
+
+    // Merge with existing campi if any
+    Object.entries(rawCampi).forEach(([k, v]) => {
+        campi[k] = v;
+    });
+
     return {
-        id: r.id || crypto.randomUUID(),
-        titolo: r.titolo || 'Senza titolo',
+        id: r.id || r.ID || crypto.randomUUID(),
+        titolo: r.titolo || r.Titolo || 'Senza titolo',
         tipo,
         categoria,
-        contenuto: r.contenuto || '',
+        contenuto: r.contenuto || r.Contenuto || '',
         tags,
         tag: tags,
         outlinks,
-        fonte: r.fonte || '',
-        campi: Object.fromEntries(Object.entries(r.campi || {}).map(([k, v]) => [k, String(v)])),
-        creato: r.creato || new Date().toISOString(),
-        modificato: r.modificato || new Date().toISOString(),
+        fonte: r.fonte || r.Fonte || '',
+        campi,
+        creato: r.creato || r.Creato || new Date().toISOString(),
+        modificato: r.modificato || r.Modificato || new Date().toISOString(),
         embHash: r.embHash || '',
         chunks: Array.isArray(r.chunks) ? r.chunks : []
     };
@@ -127,15 +152,28 @@ export function pickJsonFile(): Promise<Archive | null> {
 export function exportExcel(archive: Archive) {
     const data = archive.records.map(r => {
         const row: any = {
+            ID: r.id,
             Titolo: r.titolo,
             Tipo: r.tipo,
+            Categoria: r.categoria,
             Contenuto: r.contenuto,
-            Tags: r.tags.join(', '),
-            Fonte: r.fonte
+            Tags: r.tags.join('; '),
+            Fonte: r.fonte,
+            Creato: r.creato,
+            Modificato: r.modificato
         };
-        archive.schema.campi.forEach(c => {
-            row[c.etichetta] = r.campi[c.chiave];
+        
+        // Export dynamic fields
+        Object.entries(r.campi).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                // Use | for images/videos and ; for lists
+                const separator = key.includes('immagine') || key.includes('image') || key.includes('video') ? '|' : '; ';
+                row[`campo_${key}`] = value.join(separator);
+            } else {
+                row[`campo_${key}`] = value;
+            }
         });
+        
         return row;
     });
     const ws = XLSX.utils.json_to_sheet(data);

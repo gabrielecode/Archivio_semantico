@@ -15,12 +15,25 @@ export function calculateEmbHash(rec: Rec): string {
 }
 
 export function buildHeader(rec: Rec): string {
-    const fieldsStr = Object.entries(rec.campi)
-        .filter(([_, v]) => v !== '' && v !== null && v !== undefined)
-        .map(([k, v]) => ` | ${k}: ${v}`)
-        .join('');
+    const fieldsParts: string[] = [];
+    
+    for (const [key, value] of Object.entries(rec.campi)) {
+        if (!value) continue;
+        
+        if (Array.isArray(value)) {
+            if (value.length > 0) {
+                fieldsParts.push(`${key}: ${value.filter(v => !!v).join('; ')}`);
+            }
+        } else {
+            fieldsParts.push(`${key}: ${value}`);
+        }
+    }
+
+    const fieldsStr = fieldsParts.length > 0 ? ` | ${fieldsParts.join(' | ')}` : '';
     const tagsPart = rec.tags.length > 0 ? ` | tag: ${rec.tags.join(', ')}` : '';
-    return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}`.substring(0, 300);
+    const contentPart = rec.contenuto ? ` | contenuto: ${rec.contenuto.replace(/\n/g, ' ')}` : '';
+    
+    return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}${contentPart}`.substring(0, 3500);
 }
 
 export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] {
