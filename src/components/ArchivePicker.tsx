@@ -27,7 +27,7 @@ export function ArchivePicker({store, currentId, onOpen, onCreate, onImported, o
     return (
         <Modal title="Archivi" onClose={onClose} footer={
             <div className="flex justify-between w-full">
-                <div className="text-xs text-stone-500 pt-2">
+                <div className="text-xs text-text-muted pt-2">
                     {info ? `${(info.usage/1024/1024).toFixed(1)} MB di ${(info.quota/1024/1024).toFixed(1)} MB usati` : ''}
                 </div>
                 <div className="flex gap-2">
@@ -43,10 +43,10 @@ export function ArchivePicker({store, currentId, onOpen, onCreate, onImported, o
         }>
             <div className="space-y-2">
                 {list.map(item => (
-                    <div key={item.id} className={`flex items-center justify-between p-2 rounded border ${currentId === item.id ? 'bg-emerald-50 border-emerald-200' : 'bg-stone-50'}`}>
+                    <div key={item.id} className={`flex items-center justify-between p-2 rounded border ${currentId === item.id ? 'bg-accent/10 border-accent/20' : 'bg-bg-alt border-border-primary'}`}>
                         <div>
-                            <div className="font-semibold">{item.nome} {currentId === item.id && <span className="text-xs bg-emerald-100 text-emerald-700 px-1 rounded">aperto</span>}</div>
-                            <div className="text-xs text-stone-500">{item.count} voci • mod. {new Date(item.modificato).toLocaleString('it-IT')}</div>
+                            <div className="font-semibold text-text-primary">{item.nome} {currentId === item.id && <span className="text-xs bg-accent text-white px-1 rounded">aperto</span>}</div>
+                            <div className="text-xs text-text-muted">{item.count} voci • mod. {new Date(item.modificato).toLocaleString('it-IT')}</div>
                         </div>
                         <div className="flex gap-1">
                             {currentId !== item.id && <Button variant="ghost" size="sm" onClick={() => { onOpen(item.id); onClose(); }}>Apri</Button>}

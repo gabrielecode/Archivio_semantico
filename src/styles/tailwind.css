@@ -1,5 +1,58 @@
 @import "tailwindcss";
 
-html{scroll-behavior:smooth}
-:focus-visible{outline:2px solid #047857;outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@theme {
+  --color-bg-primary: var(--bg-primary);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-border-primary: var(--border-primary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-card-bg: var(--card-bg);
+  --color-bg-alt: var(--bg-alt);
+}
+
+@layer base {
+  :root {
+    --bg-primary: #F8F8F8;
+    --bg-alt: #F3F3F3;
+    --text-primary: #1A1A1A;
+    --text-muted: #666666;
+    --border-primary: #E5E5E5;
+    --accent: #3A6D5D; /* Desaturated emerald-800 */
+    --accent-hover: #2F574A;
+    --card-bg: #FFFFFF;
+  }
+
+  :root.dark {
+    --bg-primary: #121212;
+    --bg-alt: #1A1A1A;
+    --text-primary: #E0E0E0;
+    --text-muted: #A0A0A0;
+    --border-primary: #2D2D2D;
+    --accent: #528B7A; /* Desaturated emerald for dark mode */
+    --accent-hover: #63A692;
+    --card-bg: #1E1E1E;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

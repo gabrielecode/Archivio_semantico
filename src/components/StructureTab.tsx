@@ -104,17 +104,17 @@ export function StructureTab({archive, setArchive, setDirty}: {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 text-text-primary">
             <h2 className="text-xl font-serif">{t('structureTitle')}</h2>
-            <p className="text-sm text-stone-600">{t('structureSub')}</p>
+            <p className="text-sm text-text-muted">{t('structureSub')}</p>
 
-            <div className="bg-white p-4 border rounded">
+            <div className="bg-card-bg p-4 border border-border-primary rounded-xl">
                 <h3 className="font-semibold mb-2">{t('typesHeader')}</h3>
                 <div className="space-y-2">
                     {archive.schema.tipi.map(t => (
                         <div key={t} className="flex items-center gap-2">
                             {editingTipo === t ? (
-                                <input autoFocus defaultValue={t} onBlur={e => renameTipo(t, e.target.value)} onKeyDown={e => {if(e.key==='Enter') renameTipo(t, (e.target as HTMLInputElement).value)}} className="border rounded p-1 flex-1" />
+                                <input autoFocus defaultValue={t} onBlur={e => renameTipo(t, e.target.value)} onKeyDown={e => {if(e.key==='Enter') renameTipo(t, (e.target as HTMLInputElement).value)}} className="border border-border-primary rounded p-1 flex-1 bg-bg-alt text-text-primary" />
                             ) : (
                                 <span className="flex-1">{t}</span>
                             )}
@@ -123,28 +123,28 @@ export function StructureTab({archive, setArchive, setDirty}: {
                         </div>
                     ))}
                     <div className="flex gap-2">
-                        <input value={newTipo} onChange={e => setNewTipo(e.target.value)} placeholder={t('newTipoPlaceholder')} className="border rounded p-2 flex-1" />
+                        <input value={newTipo} onChange={e => setNewTipo(e.target.value)} placeholder={t('newTipoPlaceholder')} className="border border-border-primary rounded p-2 flex-1 bg-bg-alt text-text-primary" />
                         <Button onClick={addTipo}><Plus size={16} /></Button>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white p-4 border rounded">
+            <div className="bg-card-bg p-4 border border-border-primary rounded-xl">
                 <h3 className="font-semibold mb-2">{t('fieldsHeader')}</h3>
                 <div className="space-y-2">
                     {archive.schema.campi.map(c => (
                         <div key={c.chiave} className="flex items-center gap-2">
                             {editingCampo === c.chiave ? (
-                                <input autoFocus defaultValue={c.etichetta} onBlur={e => renameCampo(c.chiave, e.target.value)} onKeyDown={e => {if(e.key==='Enter') renameCampo(c.chiave, (e.target as HTMLInputElement).value)}} className="border rounded p-1 flex-1" />
+                                <input autoFocus defaultValue={c.etichetta} onBlur={e => renameCampo(c.chiave, e.target.value)} onKeyDown={e => {if(e.key==='Enter') renameCampo(c.chiave, (e.target as HTMLInputElement).value)}} className="border border-border-primary rounded p-1 flex-1 bg-bg-alt text-text-primary" />
                             ) : (
-                                <span className="flex-1">{c.etichetta} <small className="text-stone-400">({c.chiave})</small></span>
+                                <span className="flex-1">{c.etichetta} <small className="text-text-muted">({c.chiave})</small></span>
                             )}
                             <Button variant="ghost" onClick={() => setEditingCampo(c.chiave)}><Edit2 size={14} /></Button>
                             <Button variant="ghost" onClick={() => deleteCampo(c.chiave)}><Trash2 size={14} /></Button>
                         </div>
                     ))}
                     <div className="flex gap-2">
-                        <input value={newCampoEtichetta} onChange={e => setNewCampoEtichetta(e.target.value)} placeholder={t('newCampoPlaceholder')} className="border rounded p-2 flex-1" />
+                        <input value={newCampoEtichetta} onChange={e => setNewCampoEtichetta(e.target.value)} placeholder={t('newCampoPlaceholder')} className="border border-border-primary rounded p-2 flex-1 bg-bg-alt text-text-primary" />
                         <Button onClick={addCampo}><Plus size={16} /></Button>
                     </div>
                     <Button variant="secondary" onClick={() => {

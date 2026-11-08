@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network, Moon, Sun} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
@@ -19,6 +19,23 @@ import {DriveBackupDialog} from './components/DriveBackupDialog';
 export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, name: string, email?: string}, onLogout: () => void, onOpenAdmin?: () => void}) {
     const {lang, setLang, t} = useTranslation();
     const [currentUser] = useState(user);
+    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        const saved = localStorage.getItem('tcm_theme');
+        if (saved) return saved as 'light' | 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    });
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('tcm_theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
     const [tab, setTab] = useState<'ricerca' | 'schede' | 'campi' | 'graph'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
     const [archiveId, setArchiveId] = useState<string | null>(null);
@@ -157,16 +174,16 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
         setDirty(true);
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-stone-50"><RefreshCw className="animate-spin text-emerald-700" size={32} /></div>;
-    if (!archive) return <div className="min-h-screen flex items-center justify-center text-stone-800 p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua</Button></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-bg-primary"><RefreshCw className="animate-spin text-accent" size={32} /></div>;
+    if (!archive) return <div className="min-h-screen flex items-center justify-center text-text-primary p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua</Button></div>;
 
     return (
-        <div className="min-h-screen bg-stone-50/50 pb-20 sm:pb-0 text-stone-900 font-sans antialiased">
-            <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-stone-200 z-30">
+        <div className="min-h-screen bg-bg-primary pb-20 sm:pb-0 text-text-primary font-sans antialiased">
+            <header className="sticky top-0 bg-card-bg/80 backdrop-blur-md border-b border-border-primary z-30">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
                     {/* Zone 1: Brand */}
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-9 h-9 bg-emerald-800 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-900/10">
+                        <div className="w-9 h-9 bg-accent rounded-xl flex items-center justify-center text-white shadow-lg shadow-accent/20">
                             <Leaf size={20} />
                         </div>
                         <input 
@@ -181,13 +198,13 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     <nav className="hidden lg:flex items-center gap-1 bg-stone-100/50 p-1 rounded-2xl">
                         <button 
                             onClick={() => setTab('ricerca')} 
-                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'ricerca' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'ricerca' ? 'bg-bg-primary text-accent shadow-sm' : 'text-text-muted hover:text-text-primary hover:bg-bg-alt'}`}
                         >
                             <Search size={16} /> Ricerca
                         </button>
                         <button 
                             onClick={() => setTab('schede')} 
-                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'schede' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'schede' ? 'bg-bg-primary text-accent shadow-sm' : 'text-text-muted hover:text-text-primary hover:bg-bg-alt'}`}
                         >
                             <Database size={16} /> Schede ({archive.records.length})
                         </button>
@@ -199,7 +216,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                         </button>
                         <button 
                             onClick={() => setTab('campi')} 
-                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'campi' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-500 hover:text-stone-900 hover:bg-stone-100'}`}
+                            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all flex items-center gap-2 ${tab === 'campi' ? 'bg-bg-primary text-accent shadow-sm' : 'text-text-muted hover:text-text-primary hover:bg-bg-alt'}`}
                         >
                             <Settings2 size={16} /> Campi
                         </button>
@@ -208,6 +225,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     {/* Zone 3: Primary Action / User */}
                     <div className="flex items-center gap-3 shrink-0">
                         <div className="hidden sm:flex items-center gap-2 mr-2">
+                             <Button variant="ghost" size="sm" onClick={toggleTheme} icon={theme === 'light' ? Moon : Sun} />
                              <Button variant="ghost" size="sm" onClick={() => setShowArchivePicker(true)}>{t('archives')}</Button>
                              <Button variant="ghost" size="sm" onClick={() => setShowGuideModal(true)} icon={HelpCircle}>{t('instructions')}</Button>
                         </div>
@@ -215,47 +233,47 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                         <div className="relative" ref={menuRef}>
                             <button 
                                 onClick={() => setShowMenu(!showMenu)} 
-                                className="flex items-center gap-2 p-1 pl-3 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors border border-stone-200"
+                                className="flex items-center gap-2 p-1 pl-3 bg-bg-alt hover:bg-bg-primary rounded-full transition-colors border border-border-primary"
                             >
-                                <span className="text-xs font-bold text-stone-600 hidden md:block max-w-[100px] truncate">{currentUser.name || currentUser.email}</span>
-                                <div className="w-8 h-8 rounded-full bg-white text-emerald-800 font-bold flex items-center justify-center text-sm shadow-sm border border-stone-200">
+                                <span className="text-xs font-bold text-text-muted hidden md:block max-w-[100px] truncate">{currentUser.name || currentUser.email}</span>
+                                <div className="w-8 h-8 rounded-full bg-card-bg text-accent font-bold flex items-center justify-center text-sm shadow-sm border border-border-primary">
                                     {(currentUser.email || currentUser.name || 'U').charAt(0).toUpperCase()}
                                 </div>
                             </button>
                             {showMenu && (
-                                <div className="absolute right-0 top-full mt-3 bg-white border border-stone-200 rounded-3xl shadow-2xl py-3 min-w-[260px] z-40 text-stone-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                    <div className="px-5 py-3 border-b border-stone-100 bg-stone-50/50">
-                                        <p className="font-bold text-sm text-stone-900 truncate">{currentUser.name || 'Utente'}</p>
-                                        <p className="text-xs text-stone-500 truncate">{currentUser.email}</p>
+                                <div className="absolute right-0 top-full mt-3 bg-card-bg border border-border-primary rounded-3xl shadow-2xl py-3 min-w-[260px] z-40 text-text-primary overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="px-5 py-3 border-b border-border-primary bg-bg-alt/50">
+                                        <p className="font-bold text-sm text-text-primary truncate">{currentUser.name || 'Utente'}</p>
+                                        <p className="text-xs text-text-muted truncate">{currentUser.email}</p>
                                     </div>
                                     <div className="p-2 space-y-1">
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {createNewArchive(); setShowMenu(false);}} icon={Plus}>{t('newArchive')}</Button>
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { exportArchiveJson(archive); setShowMenu(false); }} icon={Cloud}>{t('exportJson')}</Button>
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}} icon={Cloud}>{t('driveBackupMenu')}</Button>
-                                        <div className="h-px bg-stone-100 my-1 mx-2" />
+                                        <div className="h-px bg-border-primary my-1 mx-2" />
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }} icon={Globe}>{lang === 'it' ? 'Lingua: Italiano' : 'Sprache: Deutsch'}</Button>
                                         {onOpenAdmin && (
-                                            <Button variant="ghost" className="w-full justify-start text-sm text-emerald-700 font-bold" onClick={() => {onOpenAdmin(); setShowMenu(false);}} icon={Shield}>Area Admin</Button>
+                                            <Button variant="ghost" className="w-full justify-start text-sm text-accent font-bold" onClick={() => {onOpenAdmin(); setShowMenu(false);}} icon={Shield}>Area Admin</Button>
                                         )}
-                                        <div className="h-px bg-stone-100 my-1 mx-2" />
+                                        <div className="h-px bg-border-primary my-1 mx-2" />
                                         <Button variant="ghost" className="w-full justify-start text-sm text-red-600 font-bold" onClick={() => {handleLogout(); setShowMenu(false);}} icon={LogOut}>{t('logout')}</Button>
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <button className="lg:hidden p-2 text-stone-600" onClick={() => setTab(tab === 'ricerca' ? 'schede' : 'ricerca')}>
+                        <button className="lg:hidden p-2 text-text-muted" onClick={() => setTab(tab === 'ricerca' ? 'schede' : 'ricerca')}>
                             <Menu size={24} />
                         </button>
                     </div>
                 </div>
 
                 {/* Sub-header status bar */}
-                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-[11px] h-8 bg-stone-50/80 border-t border-stone-100">
+                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-[11px] h-8 bg-bg-alt/80 border-t border-border-primary">
                     <div className="flex items-center gap-4">
                         <div className={saveState==='error'?'text-red-600 font-bold':''}>
                             {saveState==='saving' ? t('saving') : 
                              dirty ? <span className="text-amber-700 font-bold uppercase tracking-wider">{t('unsavedChangesPending')}</span> : 
-                             saveState==='saved' ? <span className="text-emerald-700 font-bold uppercase tracking-wider">Sincronizzato {lastSavedTime}</span> : 
+                             saveState==='saved' ? <span className="text-accent font-bold uppercase tracking-wider">Sincronizzato {lastSavedTime}</span> : 
                              <span className="uppercase tracking-wider opacity-50">Pronto</span>}
                         </div>
                         {saveState==='error' && <button onClick={flush} className="text-red-700 font-bold underline ml-2 uppercase tracking-wider">Riprova</button>}
@@ -292,17 +310,17 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
             </main>
 
             {/* Mobile Fixed Bottom Navigation */}
-            <nav className="sm:hidden fixed bottom-6 inset-x-6 h-16 bg-white/90 backdrop-blur-xl border border-stone-200 flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
+            <nav className="sm:hidden fixed bottom-6 inset-x-6 h-16 bg-card-bg/90 backdrop-blur-xl border border-border-primary flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
                 <button 
                     onClick={() => setTab('ricerca')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Search size={20} />
                     <span className="text-[10px] font-bold mt-1">Cerca</span>
                 </button>
                 <button 
                     onClick={() => setTab('schede')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Database size={20} />
                     <span className="text-[10px] font-bold mt-1">Schede</span>
@@ -316,20 +334,20 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                 </button>
                 <button 
                     onClick={() => setTab('campi')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-emerald-700 bg-emerald-50 shadow-inner' : 'text-stone-400'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Settings2 size={20} />
                     <span className="text-[10px] font-bold mt-1">Campi</span>
                 </button>
             </nav>
 
-            <footer className="text-center p-12 text-sm text-stone-400 border-t border-stone-100 mt-20 bg-white hidden sm:block">
+            <footer className="text-center p-12 text-sm text-text-muted border-t border-border-primary mt-20 bg-card-bg hidden sm:block">
                 <div className="max-w-2xl mx-auto space-y-4">
                     <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
                     <p className="text-[11px] opacity-60">{t('disclaimerSimilarity')}</p>
-                    <div className="pt-4 flex items-center justify-center gap-2 text-stone-600 font-medium">
+                    <div className="pt-4 flex items-center justify-center gap-2 text-text-primary font-medium">
                         <span>{t('createdBylabel')}</span>
-                        <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-800 hover:text-emerald-600 transition-colors font-bold">Connect & Create</a>
+                        <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors font-bold">Connect & Create</a>
                     </div>
                 </div>
             </footer>

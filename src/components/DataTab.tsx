@@ -258,30 +258,30 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   if (!draft) return null;
 
   return (
-    <div className="space-y-8 text-stone-900 text-base">
-        <div className="sticky top-[110px] bg-stone-50/80 backdrop-blur-sm z-10 py-4 -mx-6 px-6">
+    <div className="space-y-8 text-text-primary text-base">
+        <div className="sticky top-[110px] bg-bg-primary/80 backdrop-blur-sm z-10 py-4 -mx-6 px-6">
             <div className="max-w-7xl mx-auto space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-stone-200 shadow-sm">
-                    <div className="flex items-center gap-1 bg-stone-50 p-1 rounded-2xl border border-stone-100">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-card-bg p-4 rounded-3xl border border-border-primary shadow-sm">
+                    <div className="flex items-center gap-1 bg-bg-alt p-1 rounded-2xl border border-border-primary">
                         <Button variant="ghost" size="sm" onClick={() => handleNavigate(-1)} disabled={currentIndex <= 0} className="w-10 h-10 p-0 rounded-xl"><ChevronLeft size={20}/></Button>
-                        <div className="px-4 text-xs font-bold text-stone-600 tracking-tighter">
+                        <div className="px-4 text-xs font-bold text-text-muted tracking-tighter">
                             {currentIndex + 1} <span className="opacity-40">/</span> {filteredRecords.length}
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => handleNavigate(1)} disabled={currentIndex >= filteredRecords.length - 1} className="w-10 h-10 p-0 rounded-xl"><ChevronRight size={20}/></Button>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        <div className="hidden sm:flex bg-stone-50 p-1 rounded-2xl border border-stone-100 mr-2">
+                        <div className="hidden sm:flex bg-bg-alt p-1 rounded-2xl border border-border-primary mr-2">
                             <button 
                                 onClick={() => handleViewChange('Modulo')} 
-                                className={`p-2 rounded-xl transition-all ${view === 'Modulo' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+                                className={`p-2 rounded-xl transition-all ${view === 'Modulo' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
                                 title={t('viewModule')}
                             >
                                 <FileText size={20}/>
                             </button>
                             <button 
                                 onClick={() => handleViewChange('Tabella')} 
-                                className={`p-2 rounded-xl transition-all ${view === 'Tabella' ? 'bg-white text-emerald-800 shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+                                className={`p-2 rounded-xl transition-all ${view === 'Tabella' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
                                 title={t('viewTable')}
                             >
                                 <TableIcon size={20}/>
@@ -298,7 +298,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
                 <div className="flex items-center gap-3">
                     <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted/50" />
                         <input 
                             placeholder="Cerca tra le tue schede..." 
                             value={searchTerm} 
@@ -312,7 +312,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         </div>
 
         {view === 'Modulo' ? (
-            <div className="grid lg:grid-cols-2 gap-12 items-start pt-4">
+            <div className={`${editing ? 'w-full' : 'grid lg:grid-cols-2 gap-12 items-start'} pt-4`}>
                 <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                     {editing ? (
                       <DynamicForm 
@@ -336,15 +336,14 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                     )}
                 </div>
 
-                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                    {!editing && (
-                      <>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-stone-200 shadow-sm space-y-6">
+                {!editing && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="bg-card-bg rounded-[2.5rem] p-8 border border-border-primary shadow-sm space-y-6">
                             <div className="flex items-center gap-3 border-b border-stone-100 pb-4">
-                                <div className="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center text-stone-500">
+                                <div className="w-8 h-8 bg-bg-alt rounded-lg flex items-center justify-center text-text-muted">
                                     <FileText size={18} />
                                 </div>
-                                <h3 className="font-bold text-stone-900 tracking-tight">Contenuto Libero & Wiki</h3>
+                                <h3 className="font-bold text-text-primary tracking-tight">Contenuto Libero & Wiki</h3>
                             </div>
                             <WikiContent
                                 content={draft.contenuto}
@@ -366,29 +365,28 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             onSelectRecord={id => setSelectedId(id)}
                             onCreateRecord={title => handleCreateRecordFromWiki(title)}
                         />
-                      </>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         ) : (
-            <div className="bg-white border border-stone-200 rounded-[2.5rem] shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="bg-stone-50/80 text-stone-500 text-[11px] font-bold uppercase tracking-widest border-b border-stone-100">
+                        <tr className="bg-bg-alt/80 text-text-muted text-[11px] font-bold uppercase tracking-widest border-b border-border-primary">
                             <th className="px-8 py-5 cursor-pointer hover:text-stone-900 transition-colors" onClick={() => {setSortField('titolo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('titleLabel').replace('*', '')}</th>
                             <th className="px-6 py-5 cursor-pointer hover:text-stone-900 transition-colors" onClick={() => {setSortField('tipo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('typeLabel')}</th>
                             <th className="px-6 py-5">{t('tagsLabel')}</th>
                             <th className="px-8 py-5 cursor-pointer hover:text-stone-900 transition-colors text-right" onClick={() => {setSortField('modificato'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{lang === 'de' ? 'Geändert' : 'Modificato'}</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50">
+                    <tbody className="divide-y divide-bg-alt/50">
                         {filteredRecords.slice(0, 50).map(r => (
                             <tr key={r.id} className="group hover:bg-stone-50/50 cursor-pointer transition-colors" onClick={() => {setSelectedId(r.id); setView('Modulo');}}>
                                 <td className="px-8 py-4">
-                                    <div className="font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">{r.titolo}</div>
+                                    <div className="font-bold text-text-primary group-hover:text-accent transition-colors">{r.titolo}</div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className="px-3 py-1 bg-stone-100 text-stone-500 rounded-full text-[10px] font-bold uppercase tracking-wider group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">{r.tipo}</span>
+                                    <span className="px-3 py-1 bg-bg-alt text-text-muted rounded-full text-[10px] font-bold uppercase tracking-wider group-hover:bg-accent/10 group-hover:text-accent transition-colors">{r.tipo}</span>
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex flex-wrap gap-1">

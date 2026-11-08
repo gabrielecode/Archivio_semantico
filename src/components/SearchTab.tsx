@@ -168,7 +168,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
     if (validRecords.length === 0) return <EmptyState icon={Search} title={t('noIndexedVoices')} text={t('noIndexedSub')} action={{label: t('goToData'), onClick: onGoData}} />;
 
     return (
-        <div className="space-y-6 text-stone-900 text-base">
+        <div className="space-y-6 text-text-primary text-base">
             <div className="space-y-3">
                 <div className="relative flex gap-2">
                     <div className="relative flex-1">
@@ -178,12 +178,12 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                             onChange={e => setQuery(e.target.value)} 
                             onKeyDown={e => e.key === 'Enter' && handleSearch()} 
                             placeholder={`${t('searchPlaceholder')} (premi '/' per cercare)`} 
-                            className="w-full pl-4 pr-10 py-3 text-base rounded-xl border border-stone-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none min-h-[44px]" 
+                            className="w-full pl-4 pr-10 py-3 text-base rounded-xl border border-border-primary bg-card-bg text-text-primary focus:ring-2 focus:ring-accent focus:outline-none min-h-[44px]" 
                         />
                         {query && (
                             <button 
                                 onClick={() => { setQuery(''); setResults(null); searchRef.current?.focus(); }}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 px-1.5 py-0.5 text-sm font-bold"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted/50 hover:text-text-primary px-1.5 py-0.5 text-sm font-bold"
                                 title="Cancella ricerca"
                             >
                                 ✕
@@ -196,13 +196,13 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                 </div>
 
                 <div className="space-y-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
-                        <span className="font-medium flex items-center gap-1"><Sparkles size={14} className="text-emerald-700"/> {t('searchExamples')}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
+                        <span className="font-medium flex items-center gap-1"><Sparkles size={14} className="text-accent"/> {t('searchExamples')}</span>
                         {examples.map(ex => (
                             <button 
                                 key={ex} 
                                 onClick={() => { setQuery(ex); performSearch(ex); }} 
-                                className="px-3 py-1 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg text-xs font-medium border border-stone-200 transition-colors"
+                                className="px-3 py-1 bg-bg-alt hover:bg-accent/10 hover:text-accent rounded-lg text-xs font-medium border border-border-primary transition-colors"
                             >
                                 {ex}
                             </button>
@@ -210,13 +210,13 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                     </div>
 
                     {recent.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 pt-1">
-                            <span className="font-medium flex items-center gap-1"><History size={14} className="text-stone-500"/> {t('recentSearches')}:</span>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted pt-1">
+                            <span className="font-medium flex items-center gap-1"><History size={14} className="text-text-muted/50"/> {t('recentSearches')}:</span>
                             {recent.map(r => (
                                 <button 
                                     key={r} 
                                     onClick={() => { setQuery(r); performSearch(r); }} 
-                                    className="px-2.5 py-0.5 bg-white hover:bg-stone-100 rounded border border-stone-200 text-xs"
+                                    className="px-2.5 py-0.5 bg-card-bg hover:bg-bg-alt rounded border border-border-primary text-xs"
                                 >
                                     {r}
                                 </button>
@@ -230,11 +230,11 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
             </div>
             
             <div className="flex flex-wrap gap-4">
-                <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white min-h-[40px]">
+                <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-2 rounded-xl border border-border-primary text-sm bg-card-bg text-text-primary min-h-[40px]">
                     <option value="">{t('allTypes')}</option>
                     {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white min-h-[40px]">
+                <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-2 rounded-xl border border-border-primary text-sm bg-card-bg text-text-primary min-h-[40px]">
                     <option value="">{t('allTags')}</option>
                     {allTags.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -245,19 +245,19 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
             {loading && (
                 <div className="space-y-4">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="p-5 bg-white rounded-2xl border border-stone-200 shadow-sm animate-pulse space-y-3">
-                            <div className="h-5 bg-stone-200 rounded w-1/3"></div>
-                            <div className="h-4 bg-stone-100 rounded w-full"></div>
-                            <div className="h-4 bg-stone-100 rounded w-2/3"></div>
+                        <div key={i} className="p-5 bg-card-bg rounded-2xl border border-border-primary shadow-sm animate-pulse space-y-3">
+                            <div className="h-5 bg-bg-alt rounded w-1/3"></div>
+                            <div className="h-4 bg-bg-alt/50 rounded w-full"></div>
+                            <div className="h-4 bg-bg-alt/50 rounded w-2/3"></div>
                         </div>
                     ))}
                 </div>
             )}
 
             {results !== null && results.length === 0 && !loading && (
-                <div className="p-8 bg-white rounded-2xl border border-stone-200 text-center space-y-3">
-                    <p className="font-semibold text-stone-800 text-lg">{t('noResults')}</p>
-                    <p className="text-stone-600 text-sm">{t('noResultsSuggestions')}</p>
+                <div className="p-8 bg-card-bg rounded-2xl border border-border-primary text-center space-y-3">
+                    <p className="font-semibold text-text-primary text-lg">{t('noResults')}</p>
+                    <p className="text-text-muted text-sm">{t('noResultsSuggestions')}</p>
                 </div>
             )}
 
@@ -274,20 +274,20 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                         const snippet = res.chunkText.startsWith(`${header}: `) ? res.chunkText.substring(header.length + 2) : res.chunkText;
                         
                         return (
-                            <div key={res.id} onClick={() => onOpenRec(res.id)} className="p-5 bg-white rounded-2xl border border-stone-200 shadow-sm cursor-pointer hover:border-emerald-500 transition-all space-y-3">
+                            <div key={res.id} onClick={() => onOpenRec(res.id)} className="p-5 bg-card-bg rounded-2xl border border-border-primary shadow-sm cursor-pointer hover:border-accent transition-all space-y-3">
                                 <div className="flex justify-between items-start gap-3">
                                     <h4 className="font-serif font-bold text-lg text-stone-900">{rec.titolo}</h4>
                                     <div className="flex items-center gap-2 shrink-0">
                                         {getRelevanceLabel(res.score)}
-                                        <span className="px-2.5 py-1 bg-stone-100 text-stone-800 rounded-lg text-xs font-medium">{rec.tipo}</span>
+                                        <span className="px-2.5 py-1 bg-bg-alt text-text-primary rounded-lg text-xs font-medium">{rec.tipo}</span>
                                     </div>
                                 </div>
                                 {rec.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
-                                        {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-xs">{t}</span>)}
+                                        {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-bg-alt text-text-muted rounded text-xs">{t}</span>)}
                                     </div>
                                 )}
-                                <p className="text-stone-600 line-clamp-3 text-base leading-relaxed">{snippet}</p>
+                                <p className="text-text-muted line-clamp-3 text-base leading-relaxed">{snippet}</p>
                             </div>
                         );
                     })}
