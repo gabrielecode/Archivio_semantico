@@ -52,16 +52,26 @@ export function useDriveBackup(userId: string, userEmail?: string, store: Store 
         } catch (e) {}
     };
 
-    const handleConnect = async () => {
+    const handleConnect = async (): Promise<{success: boolean, error?: string}> => {
         try {
             await connect(userEmail);
             const next = {...configRef.current, connected: true, suspended: false, consecutiveErrors: 0};
             saveConfig(next);
-            backupNow();
+            await backupNow(true);
+            return {success: true};
         } catch (e: any) {
-            if (e.message === 'DRIVE_RECONNECT') {
-                saveConfig({...configRef.current, connected: false, suspended: true});
+            console.error('Drive connection error:', e);
+            const isClosed = e.message === 'popup_closed_by_user';
+            const isReconnect = e.message === 'DRIVE_RECONNECT';
+            saveConfig({
+                ...configRef.current, 
+                connected: false, 
+                suspended: isReconnect && !isClosed
+            });
+            if (isClosed) {
+                return {success: false, error: 'Accesso annullato dall\'utente.'};
             }
+            return {success: false, error: e.message || 'Errore durante la connessione a Google Drive'};
         }
     };
 
@@ -75,44 +85,70 @@ export function useDriveBackup(userId: string, userEmail?: string, store: Store 
         saveConfig({...configRef.current, includeEmbeddings: val});
     };
 
-    const backupNow = useCallback(async () => {
-        if (!configRef.current.connected || configRef.current.suspended || !storeRef.current || backingUp) return;
+    const backupNow = useCallback(async (manual = false): Promise<{success: boolean, count?: number, error?: string}> => {
+        if (!configRef.current.connected) {
+            return {success: false, error: 'Google Drive non è ancora collegato.'};
+        }
+        if (!manual && configRef.current.suspended) {
+            return {success: false, error: 'Sincronizzazione sospesa per errori precedenti. Riconnetti Drive.'};
+        }
+        if (!storeRef.current) {
+            return {success: false, error: 'Archivio locale non pronto.'};
+        }
+        if (backingUp) {
+            return {success: false, error: 'Salvataggio già in corso.'};
+        }
+
         setBackingUp(true);
         try {
             const list = await storeRef.current.list();
             const updatedLast = {...configRef.current.last};
-            let successAny = false;
+            let count = 0;
             let latestTime = lastBackupTime;
 
             for (const item of list) {
                 const arch = await storeRef.current.get(item.id);
-                if (!arch || !arch.records || arch.records.length === 0) continue;
+                if (!arch) continue;
 
                 const copy = configRef.current.includeEmbeddings ? arch : {
                     ...arch,
-                    records: arch.records.map(r => ({...r, chunks: []}))
+                    records: (arch.records || []).map(r => ({...r, chunks: []}))
                 };
-                const jsonStr = JSON.stringify(copy);
+                const jsonStr = JSON.stringify(copy, null, 2);
                 const hash = await sha256(jsonStr);
 
-                if (updatedLast[item.id]?.hash === hash) continue;
+                // If not manual, skip unchanged archives
+                if (!manual && updatedLast[item.id]?.hash === hash) continue;
 
-                const existing = await findArchiveFile(item.id);
+                const existing = await findArchiveFile(item.id, arch.nome);
                 const fileId = await saveArchiveFile(item.id, arch.nome, jsonStr, existing?.id);
                 const at = new Date().toISOString();
                 updatedLast[item.id] = {hash, at};
                 latestTime = at;
-                successAny = true;
+                count++;
             }
 
-            if (successAny) {
-                saveConfig({...configRef.current, last: updatedLast, consecutiveErrors: 0, suspended: false});
-                if (latestTime) setLastBackupTime(latestTime);
-            }
+            const next = {
+                ...configRef.current, 
+                last: updatedLast, 
+                consecutiveErrors: 0, 
+                suspended: false
+            };
+            saveConfig(next);
+            if (latestTime) setLastBackupTime(latestTime);
+            localStorage.setItem('tcm_last_backup_date', new Date().toISOString());
+            return {success: true, count};
         } catch (e: any) {
+            console.error('Backup failure:', e);
             const errs = configRef.current.consecutiveErrors + 1;
             const suspended = errs >= 3 || e.message === 'DRIVE_RECONNECT';
-            saveConfig({...configRef.current, consecutiveErrors: errs, suspended, connected: e.message === 'DRIVE_RECONNECT' ? false : configRef.current.connected});
+            saveConfig({
+                ...configRef.current, 
+                consecutiveErrors: errs, 
+                suspended, 
+                connected: e.message === 'DRIVE_RECONNECT' ? false : configRef.current.connected
+            });
+            return {success: false, error: e.message || 'Errore durante il salvataggio su Google Drive'};
         } finally {
             setBackingUp(false);
         }
@@ -121,7 +157,7 @@ export function useDriveBackup(userId: string, userEmail?: string, store: Store 
     useEffect(() => {
         if (!config.connected || config.suspended) return;
         const interval = setInterval(() => {
-            backupNow();
+            backupNow(false);
         }, 30 * 60 * 1000);
         return () => clearInterval(interval);
     }, [config.connected, config.suspended, backupNow]);

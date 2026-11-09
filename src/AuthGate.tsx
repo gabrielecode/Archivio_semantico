@@ -17,6 +17,8 @@ import App from './App';
 import GuideContent from './components/GuideContent';
 import { AdminPanel } from './components/AdminPanel';
 import { useTranslation } from './utils/i18n';
+import { setAccessToken, revoke } from './utils/drive';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 export default function AuthGate() {
     const { lang, setLang, t } = useTranslation();
@@ -49,6 +51,8 @@ export default function AuthGate() {
                 } catch (e) {
                     console.error('Error saving user profile:', e);
                 }
+            } else {
+                revoke();
             }
         });
         return () => unsubscribe();
@@ -78,7 +82,11 @@ export default function AuthGate() {
         setErrorMsg(null);
         setSubmitting(true);
         try {
-            await signInWithPopup(auth, googleProvider);
+            const result = await signInWithPopup(auth, googleProvider);
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential?.accessToken) {
+                setAccessToken(credential.accessToken, 3600);
+            }
         } catch (e: any) {
             setErrorMsg(translateFirebaseError(e));
         } finally {
