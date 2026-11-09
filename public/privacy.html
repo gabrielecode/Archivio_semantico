@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Informativa sulla Privacy - Archivio Semantico MTC</title>
+  <meta name="description" content="Informativa sulla privacy e trattamento dei dati per l'applicazione Archivio Semantico MTC.">
+  <style>
+    :root {
+      --primary: #047857;
+      --primary-dark: #065f46;
+      --bg: #fafaf9;
+      --card-bg: #ffffff;
+      --text: #1c1917;
+      --text-muted: #57534e;
+      --border: #e7e5e4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 2.5rem;
+      border-radius: 1.25rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #ecfdf5;
+      color: var(--primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.75rem;
+    }
+    h1 {
+      font-size: 2rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .updated {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    h2 {
+      font-size: 1.35rem;
+      color: var(--primary);
+      margin: 2rem 0 0.75rem 0;
+    }
+    p, ul {
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    ul {
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    .box {
+      background-color: #f5f5f4;
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem;
+      margin: 1.25rem 0;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
+    a {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    a:hover {
+      color: var(--primary-dark);
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Privacy Policy</div>
+      <h1>Informativa sulla Privacy</h1>
+      <p class="updated">Ultimo aggiornamento: 9 novembre 2026</p>
+    </header>
+
+    <section>
+      <h2>1. Titolare del Trattamento</h2>
+      <p>
+        L'applicazione <strong>Archivio Semantico MTC</strong> è gestita per scopi professionali e di ricerca.
+        Per qualsiasi domanda inerente al trattamento dei dati personali o per esercitare i propri diritti, è possibile contattare l'amministratore all'indirizzo e-mail:
+        <br>
+        <strong>E-mail di contatto:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Dati Raccolti e Finalità</h2>
+      <p>L'applicazione raccoglie e tratta esclusivamente i dati necessari per l'autenticazione dell'utente e la gestione degli archivi personali:</p>
+      <ul>
+        <li><strong>Dati di registrazione e accesso:</strong> Indirizzo e-mail, nome o identificativo utente univoco fornito tramite Firebase Authentication o Google Sign-In.</li>
+        <li><strong>Dati degli archivi:</strong> Schede, appunti, categorie, concetti e indici semantici memorizzati localmente nel browser (IndexedDB) e sincronizzati su richiesta dell'utente.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. Integrazione con Google Drive e Dati Utente Google</h2>
+      <p>
+        Archivio Semantico MTC offre una funzionalità facoltativa di backup su Google Drive per consentire all'utente di conservare una copia di sicurezza personale dei propri archivi.
+      </p>
+      <div class="box">
+        <strong>Ambito di autorizzazione richiesto:</strong>
+        <br>
+        <code>https://www.googleapis.com/auth/drive.file</code>
+      </div>
+      <p>
+        In relazione a questo permesso, dichiariamo esplicitamente quanto segue:
+      </p>
+      <ul>
+        <li><strong>Accesso limitato ai soli file creati dall'app:</strong> L'applicazione accede unicamente ai file di backup generati dall'applicazione stessa (formato <code>Archivio Semantico - [Nome].json</code>). Non legge, non elenca, non modifica e non elimina alcun altro file, documento o cartella presente nel Google Drive dell'utente.</li>
+        <li><strong>Nessun trasferimento a terzi:</strong> I file e i dati di Google Drive dell'utente non vengono trasferiti a server esterni dell'amministratore né a terze parti commerciali. Il caricamento avviene in modo diretto e crittografato tra il browser dell'utente e i server sicuri di Google Drive.</li>
+        <li><strong>Nessun utilizzo pubblicitario o di profilazione:</strong> I dati dell'account Google non vengono mai utilizzati per profilazione, marketing o vendita a terzi, né per addestrare modelli di intelligenza artificiale generica.</li>
+      </ul>
+      <div class="box">
+        <strong>Dichiarazione di conformità Google:</strong><br>
+        L'uso e il trasferimento da parte di Archivio Semantico MTC delle informazioni ricevute dalle API di Google sono conformi alle 
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Norme relative ai dati utente dei servizi API di Google (Google API Services User Data Policy)</a>,
+        inclusi i requisiti di utilizzo limitato (Limited Use requirements).
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Conservazione dei Dati</h2>
+      <p>
+        I dati archiviati localmente risiedono all'interno del browser del dispositivo dell'utente. I file di backup risiedono nel Google Drive dell'utente finché quest'ultimo non decide di eliminarli o sostituirli.
+      </p>
+    </section>
+
+    <section>
+      <h2>5. Revoca dei Permessi e Cancellazione Dati</h2>
+      <p>
+        L'utente può revocare in qualsiasi momento l'accesso dell'applicazione a Google Drive:
+      </p>
+      <ul>
+        <li>Dall'interno dell'applicazione, cliccando su <em>"Scollega Google Drive"</em> nella finestra di backup.</li>
+        <li>Oppure direttamente dal proprio account Google visitando la pagina: 
+          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.
+        </li>
+      </ul>
+      <p>
+        Per richiedere la cancellazione completa del proprio account o per qualsiasi altra richiesta, è sufficiente scrivere a <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>.
+      </p>
+    </section>
+
+    <footer>
+      <p>&copy; 2026 Archivio Semantico MTC. Tutti i diritti riservati.</p>
+      <p><a href="/">Torna all'applicazione</a></p>
+    </footer>
+  </div>
+</body>
+</html>

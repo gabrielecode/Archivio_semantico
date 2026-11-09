@@ -345,7 +345,12 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                 <div className="max-w-2xl mx-auto space-y-4">
                     <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
                     <p className="text-[11px] opacity-60">{t('disclaimerSimilarity')}</p>
-                    <div className="pt-4 flex items-center justify-center gap-2 text-text-primary font-medium">
+                    <div className="flex items-center justify-center gap-4 text-xs text-text-muted pt-1">
+                        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-accent underline">Informativa sulla Privacy</a>
+                        <span>•</span>
+                        <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-accent underline">Termini di Servizio</a>
+                    </div>
+                    <div className="pt-2 flex items-center justify-center gap-2 text-text-primary font-medium">
                         <span>{t('createdBylabel')}</span>
                         <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors font-bold">Connect & Create</a>
                     </div>

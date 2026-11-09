@@ -343,6 +343,11 @@ export default function AuthGate() {
             <footer className="bg-white border-t border-stone-200 text-center p-8 text-sm text-stone-500 mt-20 space-y-2">
                 <p>{t('disclaimerConsultation')}</p>
                 <p className="text-xs">{t('disclaimerSimilarity')}</p>
+                <div className="flex items-center justify-center gap-4 text-xs text-stone-600 pt-2">
+                    <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-700 underline">Informativa sulla Privacy</a>
+                    <span>•</span>
+                    <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-700 underline">Termini di Servizio</a>
+                </div>
                 <p className="text-sm font-medium text-stone-700 pt-2">
                     {t('createdBylabel')} <a href="https://sititicino.ch/" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-semibold">Connect & Create</a>
                 </p>
