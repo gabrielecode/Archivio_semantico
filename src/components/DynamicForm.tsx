@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Template, FieldDef } from '../types';
 import { ListField, ImageField, VideoField, LinkField, SelectField } from './DynamicFormFields';
 import { inputCls, Field, Button } from './ui';
-import { ChevronLeft, Info } from 'lucide-react';
+import { ChevronLeft, Info, Volume2 } from 'lucide-react';
+import { PronunciationButton } from './PronunciationButton';
 import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
@@ -83,7 +84,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="bg-white rounded-[2rem] border border-stone-200 shadow-sm overflow-hidden">
             <div 
-              className="px-8 py-6 flex items-center justify-between border-b border-stone-100"
+              className="px-8 py-6 flex flex-wrap items-center justify-between gap-4 border-b border-stone-100"
               style={{ background: `linear-gradient(to right, ${selectedTemplate.cardColor}08, transparent)` }}
             >
               <div className="flex items-center gap-4">
@@ -94,13 +95,32 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                   {selectedTemplate.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-stone-900 leading-tight">Nuova Scheda</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-stone-900 leading-tight">Nuova Scheda</h3>
+                    {selectedTemplate.id === 'mcc' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        <Volume2 size={12} className="text-blue-600" /> Pronuncia zh-CN
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm font-medium opacity-60" style={{ color: selectedTemplate.cardColor }}>{selectedTemplate.name}</p>
                 </div>
               </div>
-              {!templateId && (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>Cambia Tipo</Button>
-              )}
+              <div className="flex items-center gap-3">
+                {values['nome_principale'] && (
+                  <PronunciationButton
+                    text={values['nome_principale']}
+                    fallbackText={values['ideogramma']}
+                    label={`Pronuncia "${values['nome_principale']}"`}
+                    size="sm"
+                    variant="inline"
+                    showSpeedToggle={true}
+                  />
+                )}
+                {!templateId && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>Cambia Tipo</Button>
+                )}
+              </div>
             </div>
 
             <div className="p-8 space-y-8">
@@ -111,14 +131,107 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                   return (
                     <div key={f.id} className={isFullWidth ? 'md:col-span-2' : ''}>
                       <Field label={f.label} hint={f.required ? 'Obbligatorio' : undefined}>
-                        {f.type === 'text' && (
-                          <input
-                            className={inputCls}
-                            required={f.required}
-                            value={values[f.id] || ''}
-                            onChange={(e) => handleFieldChange(f.id, e.target.value)}
-                          />
-                        )}
+                        {f.type === 'text' && (() => {
+                          const isPointName = f.id === 'nome_principale' || f.id === 'nome_alimento' || f.id === 'nome_erba' || f.id === 'nome_olio';
+                          const isIdeogram = f.id === 'ideogramma' || f.id === 'ideogrammi' || f.id === 'ideogramma_principale';
+                          const isPronounce = f.id === 'pronuncia';
+
+                          if (isPointName) {
+                            return (
+                              <div className="space-y-1.5">
+                                <div className="flex gap-2">
+                                  <input
+                                    className={`${inputCls} flex-1`}
+                                    required={f.required}
+                                    placeholder="Es. 足三里 oppure Zusanli"
+                                    value={values[f.id] || ''}
+                                    onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                                  />
+                                  <PronunciationButton
+                                    text={values[f.id]}
+                                    fallbackText={values['ideogramma'] || values['pronuncia']}
+                                    label="Pronuncia"
+                                    size="md"
+                                    variant="primary"
+                                    showSpeedToggle={true}
+                                    title="Ascolta la pronuncia vocale in Cinese Semplificato (zh-CN)"
+                                  />
+                                </div>
+                                <p className="text-[11px] text-stone-500">
+                                  💡 Scrivi il nome del punto in cinese o pinyin e clicca su <strong>Pronuncia</strong> per ascoltare la voce in cinese semplificato.
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          if (isIdeogram) {
+                            return (
+                              <div className="flex gap-2">
+                                <input
+                                  className={`${inputCls} flex-1`}
+                                  required={f.required}
+                                  placeholder="Es. 足三里"
+                                  value={values[f.id] || ''}
+                                  onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                                />
+                                <PronunciationButton
+                                  text={values[f.id]}
+                                  fallbackText={values['nome_principale']}
+                                  label="Pronuncia"
+                                  size="md"
+                                  variant="secondary"
+                                  showSpeedToggle={true}
+                                  title="Ascolta la pronuncia dell'ideogramma"
+                                />
+                              </div>
+                            );
+                          }
+
+                          if (isPronounce) {
+                            return (
+                              <div className="space-y-1.5">
+                                <div className="flex gap-2">
+                                  <input
+                                    className={`${inputCls} flex-1`}
+                                    required={f.required}
+                                    placeholder="Es. Zú Sān Lǐ"
+                                    value={values[f.id] || ''}
+                                    onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                                  />
+                                  <PronunciationButton
+                                    text={values[f.id] || values['nome_principale'] || values['ideogramma']}
+                                    label="Pronuncia"
+                                    size="md"
+                                    variant="primary"
+                                    showSpeedToggle={true}
+                                    title="Ascolta la pronuncia vocale del punto"
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] text-stone-500">
+                                  <span>🔊 Clicca su <strong>Pronuncia</strong> per ascoltare in Cinese Semplificato (zh-CN).</span>
+                                  {!values['pronuncia'] && (values['nome_principale'] || values['ideogramma']) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleFieldChange('pronuncia', values['nome_principale'] || values['ideogramma'])}
+                                      className="text-blue-600 hover:underline font-medium cursor-pointer"
+                                    >
+                                      Usa "{values['nome_principale'] || values['ideogramma']}"
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <input
+                              className={inputCls}
+                              required={f.required}
+                              value={values[f.id] || ''}
+                              onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                            />
+                          );
+                        })()}
                         {f.type === 'textarea' && (
                           <textarea
                             className={`${inputCls} min-h-[120px] resize-y`}

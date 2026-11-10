@@ -1,5 +1,5 @@
 import {GOOGLE_CLIENT_ID} from '../lib/google';
-import {auth, googleProvider} from '../lib/firebase';
+import {auth, googleDriveProvider} from '../lib/firebase';
 import {signInWithPopup, GoogleAuthProvider} from 'firebase/auth';
 
 let tokenClient: any = null;
@@ -86,7 +86,7 @@ export async function connect(loginHint?: string): Promise<string> {
 
     // Fallback: Firebase Auth with Google Drive scope
     try {
-        const result = await signInWithPopup(auth, googleProvider);
+        const result = await signInWithPopup(auth, googleDriveProvider);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential?.accessToken) {
             currentAccessToken = credential.accessToken;

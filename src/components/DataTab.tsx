@@ -8,6 +8,7 @@ import {WikiContent} from './WikiContent';
 import {LinkPanel} from './LinkPanel';
 import {DynamicForm} from './DynamicForm';
 import {CardPreview} from './CardPreview';
+import {PronunciationButton} from './PronunciationButton';
 import {Template} from '../types';
 import templatesData from '../templates.json';
 
@@ -288,6 +289,18 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             </button>
                         </div>
                         
+                        {draft && (draft.campi?.['nome_principale'] || draft.campi?.['ideogramma'] || draft.titolo) && (
+                            <PronunciationButton
+                                text={draft.campi?.['ideogramma'] || draft.campi?.['nome_principale'] || draft.titolo}
+                                label="Pronuncia"
+                                size="sm"
+                                variant="secondary"
+                                showSpeedToggle={true}
+                                className="hidden md:inline-flex"
+                                title="Ascolta pronuncia del punto in cinese semplificato"
+                            />
+                        )}
+
                         <Button variant="ghost" onClick={handleNuovo} icon={Plus} className="hidden sm:flex">Nuova</Button>
                         <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
                         <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">

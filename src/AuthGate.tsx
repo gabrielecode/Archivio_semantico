@@ -17,8 +17,7 @@ import App from './App';
 import GuideContent from './components/GuideContent';
 import { AdminPanel } from './components/AdminPanel';
 import { useTranslation } from './utils/i18n';
-import { setAccessToken, revoke } from './utils/drive';
-import { GoogleAuthProvider } from 'firebase/auth';
+import { revoke } from './utils/drive';
 
 export default function AuthGate() {
     const { lang, setLang, t } = useTranslation();
@@ -60,6 +59,10 @@ export default function AuthGate() {
 
     const translateFirebaseError = (err: any) => {
         const code = err?.code || '';
+        const msg = err?.message || '';
+        if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) {
+            return null;
+        }
         if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) {
             return t('errorInvalidCredentials');
         }
@@ -75,6 +78,9 @@ export default function AuthGate() {
         if (code.includes('too-many-requests')) {
             return t('errorTooManyRequests');
         }
+        if (code.includes('access-denied') || msg.includes('access_denied')) {
+            return 'Accesso negato da Google: aggiungi la tua email agli "Utenti di test" nella Google Cloud Console (OAuth consent screen) oppure pubblica l\'app.';
+        }
         return t('errorAuthGeneral');
     };
 
@@ -82,13 +88,12 @@ export default function AuthGate() {
         setErrorMsg(null);
         setSubmitting(true);
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            if (credential?.accessToken) {
-                setAccessToken(credential.accessToken, 3600);
-            }
+            await signInWithPopup(auth, googleProvider);
         } catch (e: any) {
-            setErrorMsg(translateFirebaseError(e));
+            const translated = translateFirebaseError(e);
+            if (translated) {
+                setErrorMsg(translated);
+            }
         } finally {
             setSubmitting(false);
         }

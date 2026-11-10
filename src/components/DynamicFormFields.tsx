@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, X, Image as ImageIcon, Video, Link as LinkIcon, ChevronDown } from 'lucide-react';
 import { inputCls } from './ui';
+import { PronunciationButton } from './PronunciationButton';
 
 export const ListField = ({ value = [], onChange, fieldColor }: any) => {
   const add = () => onChange([...value, '']);
@@ -14,13 +15,21 @@ export const ListField = ({ value = [], onChange, fieldColor }: any) => {
   return (
     <div className="space-y-2">
       {value.map((item: string, i: number) => (
-        <div key={i} className="flex gap-2">
+        <div key={i} className="flex items-center gap-2">
           <input
             className={inputCls}
             value={item}
             onChange={(e) => update(i, e.target.value)}
             style={{ borderLeftColor: fieldColor, borderLeftWidth: item ? '4px' : '1px' }}
           />
+          {item && item.trim() && (
+            <PronunciationButton
+              text={item}
+              size="xs"
+              variant="icon"
+              title="Ascolta pronuncia elemento in cinese"
+            />
+          )}
           <button type="button" onClick={() => remove(i)} className="p-2 text-red-500 hover:bg-red-50 rounded">
             <X size={16} />
           </button>
