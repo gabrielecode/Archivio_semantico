@@ -2,7 +2,7 @@ export type Lang = 'it' | 'de';
 
 export const translations: Record<Lang, Record<string, string>> = {
   it: {
-    appName: "Ricerca semantica MTC",
+    appName: "Archivio Semantico",
     howItWorks: "Come funziona",
     instructions: "Istruzioni",
     login: "Accedi",

@@ -3,53 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Informativa sulla Privacy - Archivio Semantico MTC</title>
-  <meta name="description" content="Informativa sulla privacy e trattamento dei dati per l'applicazione Archivio Semantico MTC.">
+  <title>Informativa sulla Privacy - Archivio Semantico</title>
+  <meta name="description" content="Informativa sulla privacy e conformità al trattamento dei dati personali e delle Google API per l'applicazione Archivio Semantico.">
   <style>
     :root {
       --primary: #047857;
       --primary-dark: #065f46;
+      --primary-light: #ecfdf5;
       --bg: #fafaf9;
       --card-bg: #ffffff;
       --text: #1c1917;
       --text-muted: #57534e;
       --border: #e7e5e4;
+      --accent-badge: #d1fae5;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
-      line-height: 1.65;
-      padding: 2rem 1rem;
+      line-height: 1.7;
+      padding: 2.5rem 1rem;
     }
     .container {
-      max-width: 800px;
+      max-width: 860px;
       margin: 0 auto;
       background: var(--card-bg);
-      padding: 2.5rem;
+      padding: 3rem;
       border-radius: 1.25rem;
       border: 1px solid var(--border);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     }
     header {
       border-bottom: 2px solid var(--border);
-      padding-bottom: 1.5rem;
-      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
     }
     .badge {
       display: inline-block;
-      background-color: #ecfdf5;
-      color: var(--primary);
+      background-color: var(--accent-badge);
+      color: var(--primary-dark);
       font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.25rem 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
       border-radius: 9999px;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
     }
     h1 {
-      font-size: 2rem;
+      font-size: 2.25rem;
       color: var(--text);
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
       margin-bottom: 0.5rem;
     }
     .updated {
@@ -57,26 +67,51 @@
       color: var(--text-muted);
     }
     h2 {
-      font-size: 1.35rem;
+      font-size: 1.4rem;
       color: var(--primary);
-      margin: 2rem 0 0.75rem 0;
+      margin: 2.25rem 0 1rem 0;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
     }
-    p, ul {
-      margin-bottom: 1rem;
+    h3 {
+      font-size: 1.15rem;
+      color: var(--text);
+      margin: 1.25rem 0 0.5rem 0;
+    }
+    p, ul, ol {
+      margin-bottom: 1.1rem;
       color: var(--text);
     }
-    ul {
-      padding-left: 1.5rem;
+    ul, ol {
+      padding-left: 1.75rem;
     }
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.6rem;
     }
-    .box {
-      background-color: #f5f5f4;
+    .highlight-box {
+      background-color: var(--primary-light);
       border-left: 4px solid var(--primary);
-      padding: 1rem 1.25rem;
-      margin: 1.25rem 0;
-      border-radius: 0 0.5rem 0.5rem 0;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+    }
+    .highlight-box strong {
+      color: var(--primary-dark);
+    }
+    .warning-box {
+      background-color: #fffbeb;
+      border-left: 4px solid #d97706;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+    }
+    code {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.9em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
     a {
       color: var(--primary);
@@ -85,9 +120,24 @@
     a:hover {
       color: var(--primary-dark);
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+    }
     footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
+      margin-top: 3.5rem;
+      padding-top: 2rem;
       border-top: 1px solid var(--border);
       text-align: center;
       font-size: 0.875rem;
@@ -98,82 +148,178 @@
 <body>
   <div class="container">
     <header>
-      <div class="badge">Privacy Policy</div>
+      <div class="badge">Privacy Policy Ufficiale</div>
       <h1>Informativa sulla Privacy</h1>
-      <p class="updated">Ultimo aggiornamento: 9 novembre 2026</p>
+      <p class="subtitle">Applicazione: <strong>Archivio Semantico</strong> (conosciuta anche come <em>Archivio Semantico MTC</em>)</p>
+      <p class="updated">Ultimo aggiornamento ed efficacia: <strong>9 novembre 2026</strong></p>
     </header>
 
     <section>
-      <h2>1. Titolare del Trattamento</h2>
+      <h2>1. Titolare del Trattamento dei Dati</h2>
       <p>
-        L'applicazione <strong>Archivio Semantico MTC</strong> è gestita per scopi professionali e di ricerca.
-        Per qualsiasi domanda inerente al trattamento dei dati personali o per esercitare i propri diritti, è possibile contattare l'amministratore all'indirizzo e-mail:
-        <br>
-        <strong>E-mail di contatto:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
+        La presente Informativa sulla Privacy descrive le modalità con cui l'applicazione web <strong>Archivio Semantico</strong> raccoglie, utilizza, protegge e conserva i dati personali degli utenti in conformità alle vigenti normative sulla protezione dei dati (incluso il Regolamento Generale sulla Protezione dei Dati - RGPD/GDPR) e alle <em>Norme relative ai dati utente dei servizi API di Google</em>.
+      </p>
+      <p>
+        <strong>Sviluppatore e Titolare del Trattamento:</strong> Gabriele (Connect & Create)<br>
+        <strong>Applicazione:</strong> Archivio Semantico (URL: <a href="https://archivio-semantico.vercel.app/" target="_blank" rel="noopener noreferrer">https://archivio-semantico.vercel.app/</a>)<br>
+        <strong>Email di contatto dedicata:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
       </p>
     </section>
 
     <section>
-      <h2>2. Dati Raccolti e Finalità</h2>
-      <p>L'applicazione raccoglie e tratta esclusivamente i dati necessari per l'autenticazione dell'utente e la gestione degli archivi personali:</p>
-      <ul>
-        <li><strong>Dati di registrazione e accesso:</strong> Indirizzo e-mail, nome o identificativo utente univoco fornito tramite Firebase Authentication o Google Sign-In.</li>
-        <li><strong>Dati degli archivi:</strong> Schede, appunti, categorie, concetti e indici semantici memorizzati localmente nel browser (IndexedDB) e sincronizzati su richiesta dell'utente.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>3. Integrazione con Google Drive e Dati Utente Google</h2>
+      <h2>2. Dati Raccolti e Tipologie di Trattamento</h2>
       <p>
-        Archivio Semantico MTC offre una funzionalità facoltativa di backup su Google Drive per consentire all'utente di conservare una copia di sicurezza personale dei propri archivi.
-      </p>
-      <div class="box">
-        <strong>Ambito di autorizzazione richiesto:</strong>
-        <br>
-        <code>https://www.googleapis.com/auth/drive.file</code>
-      </div>
-      <p>
-        In relazione a questo permesso, dichiariamo esplicitamente quanto segue:
+        <strong>Archivio Semantico</strong> è progettato secondo i principi di <em>privacy by design</em> e di minimizzazione dei dati. I dati raccolti sono limitati a quanto strettamente necessario per l'autenticazione sicura dell'utente e la gestione del proprio schedario personale:
       </p>
       <ul>
-        <li><strong>Accesso limitato ai soli file creati dall'app:</strong> L'applicazione accede unicamente ai file di backup generati dall'applicazione stessa (formato <code>Archivio Semantico - [Nome].json</code>). Non legge, non elenca, non modifica e non elimina alcun altro file, documento o cartella presente nel Google Drive dell'utente.</li>
-        <li><strong>Nessun trasferimento a terzi:</strong> I file e i dati di Google Drive dell'utente non vengono trasferiti a server esterni dell'amministratore né a terze parti commerciali. Il caricamento avviene in modo diretto e crittografato tra il browser dell'utente e i server sicuri di Google Drive.</li>
-        <li><strong>Nessun utilizzo pubblicitario o di profilazione:</strong> I dati dell'account Google non vengono mai utilizzati per profilazione, marketing o vendita a terzi, né per addestrare modelli di intelligenza artificiale generica.</li>
-      </ul>
-      <div class="box">
-        <strong>Dichiarazione di conformità Google:</strong><br>
-        L'uso e il trasferimento da parte di Archivio Semantico MTC delle informazioni ricevute dalle API di Google sono conformi alle 
-        <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Norme relative ai dati utente dei servizi API di Google (Google API Services User Data Policy)</a>,
-        inclusi i requisiti di utilizzo limitato (Limited Use requirements).
-      </div>
-    </section>
-
-    <section>
-      <h2>4. Conservazione dei Dati</h2>
-      <p>
-        I dati archiviati localmente risiedono all'interno del browser del dispositivo dell'utente. I file di backup risiedono nel Google Drive dell'utente finché quest'ultimo non decide di eliminarli o sostituirli.
-      </p>
-    </section>
-
-    <section>
-      <h2>5. Revoca dei Permessi e Cancellazione Dati</h2>
-      <p>
-        L'utente può revocare in qualsiasi momento l'accesso dell'applicazione a Google Drive:
-      </p>
-      <ul>
-        <li>Dall'interno dell'applicazione, cliccando su <em>"Scollega Google Drive"</em> nella finestra di backup.</li>
-        <li>Oppure direttamente dal proprio account Google visitando la pagina: 
-          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.
+        <li>
+          <strong>Dati di Autenticazione (Google Sign-In / Firebase Authentication):</strong>
+          Quando l'utente sceglie di accedere tramite il pulsante "Accedi con Google", riceviamo da Google Identity esclusivamente i seguenti dati identificativi di base del profilo:
+          <ul>
+            <li>Indirizzo email verificato dell'account Google</li>
+            <li>Identificatore utente univoco (Google UID / Firebase UID)</li>
+            <li>Nome visualizzato o nome utente pubblico del profilo</li>
+          </ul>
+          Questi dati servono esclusivamente a identificare univocamente l'utente ed autorizzarne l'accesso al proprio archivio protetto.
+        </li>
+        <li>
+          <strong>Dati dell'Archivio e Schede Personali:</strong>
+          I testi delle note, schede cliniche o teoriche di Medicina Tradizionale Cinese, categorie, tag, correlazioni semantiche e impostazioni di visualizzazione sono creati dall'utente. Tali dati vengono memorizzati <strong>esclusivamente in locale nel browser dell'utente</strong> mediante la tecnologia standard IndexedDB.
+        </li>
+        <li>
+          <strong>Dati Tecnici di Sessione:</strong>
+          Informazioni temporanee sulla sessione (lingua preferita, tema chiaro/scuro) memorizzate localmente in <code>localStorage</code> del dispositivo dell'utente.
         </li>
       </ul>
+    </section>
+
+    <section>
+      <h2>3. Integrazione con le API di Google e Ambito di Autorizzazione (Google Drive)</h2>
       <p>
-        Per richiedere la cancellazione completa del proprio account o per qualsiasi altra richiesta, è sufficiente scrivere a <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>.
+        L'applicazione <strong>Archivio Semantico</strong> offre una funzionalità opzionale e facoltativa di backup e ripristino cloud tramite <strong>Google Drive</strong>, ideata per consentire all'utente di preservare in autonomia una copia di sicurezza dei propri archivi.
+      </p>
+      
+      <div class="highlight-box">
+        <p><strong>Ambito di autorizzazione OAuth richiesto:</strong></p>
+        <p><code>https://www.googleapis.com/auth/drive.file</code></p>
+        <p style="margin-top: 0.5rem; font-size: 0.95rem;">
+          <em>Descrizione ufficiale Google: "Visualizzare, creare e modificare i file di Google Drive che hai aperto o creato con questa app".</em>
+        </p>
+      </div>
+
+      <h3>Dettaglio sull'Accesso Limitato ai File (Principio del Minimo Privilegio)</h3>
+      <p>In conformità allo scope <code>drive.file</code>, dichiariamo in modo vincolante che:</p>
+      <ul>
+        <li>
+          <strong>Accesso esclusivo ai soli file creati dall'applicazione:</strong> 
+          L'applicazione accede unicamente ai file di backup generati dall'applicazione stessa, aventi nome formattato come <code>Archivio Semantico - [Nome].json</code>.
+        </li>
+        <li>
+          <strong>Nessun accesso ad altri file o cartelle:</strong> 
+          L'applicazione <strong>NON</strong> ha la facoltà e <strong>NON</strong> può in alcun modo visualizzare, leggere, elencare, modificare, condividere o cancellare nessun altro file, documento (Google Docs), foglio di calcolo (Google Sheets), presentazione, immagine o cartella presente nel Google Drive dell'utente.
+        </li>
+        <li>
+          <strong>Comunicazione diretta e crittografata:</strong> 
+          Tutte le operazioni di backup e ripristino avvengono con una connessione diretta e crittografata (HTTPS/TLS) tra il browser dell'utente e le API ufficiali di Google Drive (<code>https://www.googleapis.com/drive/v3/</code>). I file di backup non transitano mai su server intermediari di nostra proprietà.
+        </li>
+      </ul>
+
+      <h3>Divieto di Cessione, Vendita o Uso Pubblicitario (No Commercial Use)</h3>
+      <ul>
+        <li>I dati dell'account Google dell'utente e i contenuti dei file di backup <strong>non vengono MAI venduti, ceduti o noleggiati a terze parti</strong>.</li>
+        <li>I dati <strong>non vengono utilizzati a fini di profilazione, marketing o targeting pubblicitario</strong>.</li>
+        <li>I dati dell'utente <strong>non vengono condivisi con broker di dati né con partner commerciali</strong>.</li>
+      </ul>
+
+      <h3>Divieto di Addestramento di Modelli di Intelligenza Artificiale</h3>
+      <p>
+        I dati ottenuti tramite le API di Google o presenti nei backup degli utenti <strong>non vengono in alcun caso utilizzati per alimentare, addestrare, perfezionare o migliorare modelli di intelligenza artificiale o modelli di machine learning generalizzati</strong>.
+      </p>
+
+      <div class="highlight-box">
+        <strong>Dichiarazione Esplicita di Conformità alle Norme Google:</strong><br>
+        L'uso e il trasferimento da parte di <strong>Archivio Semantico</strong> di informazioni ricevute dalle API di Google a qualsiasi altra applicazione sono rigorosamente conformi alle 
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Norme relative ai dati utente dei servizi API di Google (Google API Services User Data Policy)</a>,
+        compresi i requisiti di utilizzo limitato (<em>Limited Use requirements</em>).
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Conservazione, Sicurezza e Gestione dei Token</h2>
+      <ul>
+        <li>
+          <strong>Conservazione in Memoria Volatile dei Token OAuth:</strong>
+          Il token di accesso Google OAuth (access token) ottenuto durante l'accesso viene conservato unicamente in memoria volatile (RAM del browser) per la durata della sessione e decade alla chiusura o alla disconnessione dell'utente. Il token non viene salvato in cookie né in archiviazione permanente non protetta.
+        </li>
+        <li>
+          <strong>Crittografia in Transito:</strong>
+          Tutte le trasmissioni di dati avvengono mediante protocollo crittografato HTTPS con certificati TLS 1.3 aggiornati.
+        </li>
+        <li>
+          <strong>Local Storage e IndexedDB:</strong>
+          I dati dello schedario risiedono nel database IndexedDB protetto dal sandboxing di sicurezza del browser web del dispositivo dell'utente.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Revoca dei Permessi e Modalità di Cancellazione Dati</h2>
+      <p>
+        L'utente mantiene in ogni momento il pieno ed esclusivo controllo sui propri dati personali e sui permessi concessi ad <strong>Archivio Semantico</strong>.
+      </p>
+
+      <h3>Come revocare l'accesso di Google Drive:</h3>
+      <ol>
+        <li>
+          <strong>Dall'interno dell'applicazione:</strong> Aprire il menu in alto a destra, selezionare la voce <em>"Backup su Google Drive"</em> e cliccare sul pulsante <em>"Scollega Google Drive"</em>.
+        </li>
+        <li>
+          <strong>Dalla pagina di sicurezza del proprio account Google:</strong> Visitare in qualsiasi momento la pagina di gestione delle autorizzazioni Google:
+          <br>
+          <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">https://myaccount.google.com/permissions</a>
+          <br>
+          Individuare <strong>"Archivio Semantico"</strong> nell'elenco delle applicazioni di terze parti e selezionare <em>"Rimuovi accesso"</em>. La revoca ha effetto immediato sui server Google.
+        </li>
+      </ol>
+
+      <h3>Come cancellare i propri dati:</h3>
+      <ul>
+        <li>
+          <strong>Cancellazione delle schede locali:</strong> L'utente può eliminare singole schede o interi archivi dall'interfaccia dell'applicazione, oppure cancellare la cache e i dati del sito dal proprio browser.
+        </li>
+        <li>
+          <strong>Cancellazione dei file di backup da Google Drive:</strong> L'utente può eliminare in qualunque momento i file <code>Archivio Semantico - *.json</code> accedendo direttamente al proprio Google Drive (drive.google.com) o svuotando il cestino di Drive.
+        </li>
+        <li>
+          <strong>Cancellazione definitiva dell'account Firebase:</strong> Per richiedere la cancellazione completa e irreversibile dell'account e di qualsiasi identificativo associato dai database di autenticazione, è sufficiente inviare un'email a:
+          <br>
+          <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
+          <br>
+          La richiesta verrà elaborata e confermata entro un massimo di 30 giorni lavorativi senza costi aggiuntivi.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. Modifiche a questa Informativa</h2>
+      <p>
+        Eventuali aggiornamenti a questa informativa sulla privacy saranno pubblicati tempestivamente su questa pagina con indicazione della nuova data di revisione. Si consiglia di consultare periodicamente la pagina per verificare eventuali modifiche normative.
+      </p>
+    </section>
+
+    <section>
+      <h2>7. Domande e Contatti</h2>
+      <p>
+        Per domande, chiarimenti sui trattamenti descritti o per l'esercizio dei diritti di accesso, rettifica, cancellazione e portabilità dei dati, è possibile rivolgersi direttamente al Titolare:
+      </p>
+      <p>
+        <strong>Email di supporto e privacy:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
       </p>
     </section>
 
     <footer>
-      <p>&copy; 2026 Archivio Semantico MTC. Tutti i diritti riservati.</p>
-      <p><a href="/">Torna all'applicazione</a></p>
+      <p>&copy; 2026 Archivio Semantico. Tutti i diritti riservati.</p>
+      <p style="margin-top: 0.5rem;"><a href="/">Torna all'applicazione Archivio Semantico</a> | <a href="/terms.html">Termini di Servizio</a></p>
     </footer>
   </div>
 </body>

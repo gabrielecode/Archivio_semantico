@@ -252,7 +252,10 @@ export default function AuthGate() {
                             <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
                                 <Leaf size={24} />
                             </div>
-                            <span className="font-serif font-bold text-xl text-stone-900">{t('appName')}</span>
+                            <div className="flex flex-col">
+                                <span className="font-serif font-bold text-xl text-stone-900 leading-tight">{t('appName')}</span>
+                                <span className="text-xs font-semibold text-emerald-800 tracking-wide uppercase">Medicina Tradizionale Cinese</span>
+                            </div>
                         </div>
                         <nav className="flex items-center gap-4 sm:gap-6">
                             <button onClick={() => scrollToSection('come-funziona')} className="hidden sm:inline text-stone-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer text-base">

@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termini di Servizio - Archivio Semantico MTC</title>
-  <meta name="description" content="Termini e condizioni d'uso per l'applicazione Archivio Semantico MTC.">
+  <title>Termini di Servizio - Archivio Semantico</title>
+  <meta name="description" content="Termini e condizioni d'uso per l'applicazione Archivio Semantico.">
   <style>
     :root {
       --primary: #047857;
       --primary-dark: #065f46;
+      --primary-light: #ecfdf5;
       --bg: #fafaf9;
       --card-bg: #ffffff;
       --text: #1c1917;
@@ -20,36 +21,44 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
-      line-height: 1.65;
-      padding: 2rem 1rem;
+      line-height: 1.7;
+      padding: 2.5rem 1rem;
     }
     .container {
-      max-width: 800px;
+      max-width: 860px;
       margin: 0 auto;
       background: var(--card-bg);
-      padding: 2.5rem;
+      padding: 3rem;
       border-radius: 1.25rem;
       border: 1px solid var(--border);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     }
     header {
       border-bottom: 2px solid var(--border);
-      padding-bottom: 1.5rem;
-      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
     }
     .badge {
       display: inline-block;
-      background-color: #ecfdf5;
+      background-color: var(--primary-light);
       color: var(--primary);
       font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.25rem 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
       border-radius: 9999px;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
     }
     h1 {
-      font-size: 2rem;
+      font-size: 2.25rem;
       color: var(--text);
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
       margin-bottom: 0.5rem;
     }
     .updated {
@@ -57,27 +66,39 @@
       color: var(--text-muted);
     }
     h2 {
-      font-size: 1.35rem;
+      font-size: 1.4rem;
       color: var(--primary);
-      margin: 2rem 0 0.75rem 0;
+      margin: 2.25rem 0 1rem 0;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
     }
-    p, ul {
-      margin-bottom: 1rem;
+    p, ul, ol {
+      margin-bottom: 1.1rem;
       color: var(--text);
     }
-    ul {
-      padding-left: 1.5rem;
+    ul, ol {
+      padding-left: 1.75rem;
     }
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .box {
+      background-color: #f5f5f4;
+      border-left: 4px solid var(--primary);
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
     }
     a {
       color: var(--primary);
       text-decoration: underline;
     }
+    a:hover {
+      color: var(--primary-dark);
+    }
     footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
+      margin-top: 3.5rem;
+      padding-top: 2rem;
       border-top: 1px solid var(--border);
       text-align: center;
       font-size: 0.875rem;
@@ -88,44 +109,83 @@
 <body>
   <div class="container">
     <header>
-      <div class="badge">Termini d'uso</div>
-      <h1>Termini di Servizio</h1>
-      <p class="updated">Ultimo aggiornamento: 9 novembre 2026</p>
+      <div class="badge">Termini di Servizio</div>
+      <h1>Termini e Condizioni d'Uso</h1>
+      <p class="subtitle">Applicazione: <strong>Archivio Semantico</strong> (conosciuta anche come <em>Archivio Semantico MTC</em>)</p>
+      <p class="updated">Ultimo aggiornamento ed efficacia: <strong>9 novembre 2026</strong></p>
     </header>
 
     <section>
       <h2>1. Accettazione dei Termini</h2>
       <p>
-        Utilizzando l'applicazione <strong>Archivio Semantico MTC</strong>, l'utente accetta i presenti Termini di Servizio. L'applicazione è concepita come strumento di consultazione, studio e archiviazione semantica per la Medicina Tradizionale Cinese.
+        Accedendo o utilizzando l'applicazione web <strong>Archivio Semantico</strong> (reperibile all'indirizzo <a href="https://archivio-semantico.vercel.app/" target="_blank" rel="noopener noreferrer">https://archivio-semantico.vercel.app/</a>), l'utente dichiara di aver letto, compreso e accettato integralmente i presenti Termini di Servizio e l'Informativa sulla Privacy ad essi collegata.
       </p>
     </section>
 
     <section>
-      <h2>2. Uso del Servizio e Backup su Google Drive</h2>
+      <h2>2. Finalità e Descrizione del Servizio</h2>
       <p>
-        L'utente è responsabile del mantenimento della riservatezza delle proprie credenziali di accesso. La funzionalità di backup su Google Drive è fornita per facilitare il salvataggio dei propri archivi direttamente nel proprio spazio cloud personale.
+        <strong>Archivio Semantico</strong> è una piattaforma applicativa concepita come strumento di supporto allo studio, catalogazione, archiviazione semantica e consultazione di schede inerenti alla Medicina Tradizionale Cinese (MTC) e discipline correlate. Le funzionalità includono:
+      </p>
+      <ul>
+        <li>Creazione, modifica ed esportazione di schede e concetti clinici o teorici.</li>
+        <li>Ricerca testuale e ricerca semantica vettoriale basata su similarità concettuale.</li>
+        <li>Visualizzazione grafica delle correlazioni tra schede (Knowledge Graph).</li>
+        <li>Salvataggio in locale nel browser e backup facoltativo sul cloud personale Google Drive dell'utente.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. Disclaimer Medico e Scientifico Importante</h2>
+      <div class="box">
+        <strong>Attenzione:</strong>
+        <p>
+          I contenuti archiviati, le correlazioni semantiche suggerite e i risultati di ricerca forniti da <strong>Archivio Semantico</strong> hanno finalità esclusivamente documentale, didattica e di consultazione personale. Non costituiscono parere medico, diagnosi clinica, né prescrizione terapeutica. L'applicazione non sostituisce in alcun caso il parere, la diagnosi o il trattamento di un medico chirurgo o professionista sanitario qualificato.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Autenticazione, Account e Backup su Google Drive</h2>
+      <ul>
+        <li>
+          <strong>Custodia delle Credenziali:</strong> L'utente è l'unico responsabile della riservatezza delle credenziali di accesso al proprio account Google o email e di tutte le attività svolte tramite il proprio account.
+        </li>
+        <li>
+          <strong>Funzionalità di Backup Google Drive:</strong> L'integrazione con Google Drive consente all'utente di salvare e ripristinare file di backup personali denominati <code>Archivio Semantico - [Nome].json</code>. L'applicazione non legge né manipola alcun altro file nel Drive dell'utente.
+        </li>
+        <li>
+          <strong>Disconnessione e Revoca:</strong> L'utente può revocare in qualsiasi momento l'autorizzazione di Google Drive dall'applicazione o tramite il pannello di sicurezza Google all'indirizzo <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">https://myaccount.google.com/permissions</a>.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Proprietà Intellettuale e Dati dell'Utente</h2>
+      <p>
+        Tutti i testi, le schede, le note e le informazioni caricate o create dall'utente all'interno dell'applicazione rimangono di esclusiva proprietà e responsabilità dell'utente stesso. L'applicazione non rivendica alcun diritto di proprietà sui dati inseriti.
       </p>
     </section>
 
     <section>
-      <h2>3. Disclaimer Medico e Scientifico</h2>
+      <h2>6. Limitazione di Responsabilità</h2>
       <p>
-        I contenuti, le schede e le correlazioni presenti o generate all'interno dell'applicazione hanno scopo puramente informativo e di studio professionale. Non costituiscono diagnosi medica, parere terapeutico né sostituiscono la consulenza di un medico abilitato.
+        L'applicazione è fornita nello stato di fatto e di disponibilità ("così com'è" / "as is"). Sebbene vengano adottate tutte le misure ragionevoli per garantire l'affidabilità e l'integrità del software, lo sviluppatore non è responsabile per eventuali perdite accidentali di dati derivanti da cancellazioni della memoria cache del browser da parte dell'utente, malfunzionamenti hardware o interruzioni di connettività Internet. Si consiglia vivamente di effettuare periodicamente copie di backup (sia tramite esportazione file JSON locale che tramite Google Drive).
       </p>
     </section>
 
     <section>
-      <h2>4. Modifiche e Contatti</h2>
+      <h2>7. Contatti</h2>
       <p>
-        Ci riserviamo il diritto di aggiornare periodicamente l'applicazione per migliorare prestazioni e sicurezza. Per qualsiasi chiarimento:
+        Per richieste o informazioni relative ai presenti Termini di Servizio, è possibile contattare l'amministratore all'indirizzo e-mail:
         <br>
-        <strong>Contatto:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
+        <strong>Email di contatto:</strong> <a href="mailto:gestsocialgabriele@gmail.com">gestsocialgabriele@gmail.com</a>
       </p>
     </section>
 
     <footer>
-      <p>&copy; 2026 Archivio Semantico MTC. Tutti i diritti riservati.</p>
-      <p><a href="/">Torna all'applicazione</a></p>
+      <p>&copy; 2026 Archivio Semantico. Tutti i diritti riservati.</p>
+      <p style="margin-top: 0.5rem;"><a href="/">Torna all'applicazione Archivio Semantico</a> | <a href="/privacy.html">Informativa sulla Privacy</a></p>
     </footer>
   </div>
 </body>
