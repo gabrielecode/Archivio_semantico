@@ -60,11 +60,20 @@ export default function AuthGate() {
     const translateFirebaseError = (err: any) => {
         const code = err?.code || '';
         const msg = err?.message || '';
+        console.error('Firebase Auth Error:', { code, msg, err });
+
         if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) {
             return null;
         }
+        if (code.includes('operation-not-allowed')) {
+            return 'L\'accesso tramite Email/Password non è ancora abilitato nella console Firebase (Authentication > Sign-in method > Email/Password). Per accedere subito, clicca sul pulsante "Continua con Google".';
+        }
+        if (code.includes('unauthorized-domain')) {
+            const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'questo dominio';
+            return `Dominio non autorizzato su Firebase: aggiungi "${currentHost}" in Firebase Console > Authentication > Settings (Impostazioni) > Authorized domains (Domini autorizzati).`;
+        }
         if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) {
-            return t('errorInvalidCredentials');
+            return 'Credenziali errate o account non ancora registrato. Se è la prima volta, clicca su "Crea un account" in basso oppure usa "Continua con Google".';
         }
         if (code.includes('email-already-in-use')) {
             return t('errorEmailInUse');
@@ -78,10 +87,13 @@ export default function AuthGate() {
         if (code.includes('too-many-requests')) {
             return t('errorTooManyRequests');
         }
+        if (code.includes('network-request-failed')) {
+            return 'Errore di connessione: impossibile raggiungere i server di autenticazione. Verifica la connessione internet o disattiva temporaneamente eventuali ad-blocker.';
+        }
         if (code.includes('access-denied') || msg.includes('access_denied')) {
             return 'Accesso negato da Google: aggiungi la tua email agli "Utenti di test" nella Google Cloud Console (OAuth consent screen) oppure pubblica l\'app.';
         }
-        return t('errorAuthGeneral');
+        return `${t('errorAuthGeneral')}${code ? ` (${code})` : ''}`;
     };
 
     const handleGoogleLogin = async () => {
