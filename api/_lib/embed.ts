@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 type RequestLike = {
     method?: string;
@@ -21,7 +22,7 @@ async function verifyAuth(req: RequestLike): Promise<string | null> {
         return null;
     }
     const token = authHeader.split('Bearer ')[1];
-    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
     if (!projectId) return null;
 
     try {
