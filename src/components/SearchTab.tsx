@@ -104,10 +104,11 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
             if (tipo && r.tipo !== tipo) continue;
             if (tag && !r.tags.includes(tag)) continue;
 
-            const campiValues = Object.values(r.campi || {})
+            const campiList = Object.values(r.campi || {})
                 .flatMap(v => Array.isArray(v) ? v : [v])
-                .filter(Boolean)
-                .join(' ');
+                .filter(Boolean);
+            const campiValues = campiList.join(' ');
+            const campiSnippet = campiList.filter(v => String(v).trim() !== (r.titolo || '').trim()).join(' · ');
             const titleNorm = normalizeText(r.titolo || '');
             const fullTextNorm = normalizeText(`${r.titolo || ''} ${r.contenuto || ''} ${(r.tags || []).join(' ')} ${campiValues}`);
 
@@ -117,7 +118,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                 matches.push({
                     id: r.id,
                     score: titleMatch ? 0.9 : 0.6,
-                    chunkText: r.contenuto || campiValues || r.titolo
+                    chunkText: r.contenuto || campiSnippet
                 });
             }
         }
@@ -328,7 +329,9 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                                         {rec.tags.map(t => <span key={t} className="px-2 py-0.5 bg-bg-alt text-text-muted rounded text-xs">{t}</span>)}
                                     </div>
                                 )}
-                                <p className="text-text-muted line-clamp-3 text-base leading-relaxed">{snippet}</p>
+                                {snippet && snippet.trim() !== rec.titolo.trim() && (
+                                    <p className="text-text-muted line-clamp-3 text-base leading-relaxed">{snippet}</p>
+                                )}
                             </div>
                         );
                     })}

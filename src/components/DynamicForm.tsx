@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Template, FieldDef } from '../types';
 import { ListField, ImageField, VideoField, LinkField, SelectField } from './DynamicFormFields';
 import { inputCls, Field, Button } from './ui';
@@ -30,13 +30,15 @@ interface DynamicFormProps {
   templateId?: string;
   onSave: (values: any, template: Template) => void;
   onCancel: () => void;
+  onDirty?: (d: boolean) => void;
 }
 
-export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }: DynamicFormProps) => {
+export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel, onDirty }: DynamicFormProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     templates.find(t => t.id === (templateId || initialValues.templateId)) || null
   );
   const [values, setValues] = useState<any>(initialValues.campi || {});
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
     if (templateId) {
@@ -47,6 +49,10 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
 
   const handleFieldChange = (id: string, val: any) => {
     setValues((prev: any) => ({ ...prev, [id]: val }));
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onDirty?.(true);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

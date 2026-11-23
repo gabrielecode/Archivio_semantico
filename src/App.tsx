@@ -360,31 +360,31 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
             <nav className="lg:hidden fixed bottom-6 inset-x-6 h-16 bg-card-bg/90 backdrop-blur-xl border border-border-primary flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
                 <button 
                     onClick={() => setTab('ricerca')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Search size={20} />
-                    <span className="text-sm font-bold mt-1">Cerca</span>
+                    <span className="text-xs font-bold mt-1">Cerca</span>
                 </button>
                 <button 
                     onClick={() => setTab('schede')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Database size={20} />
-                    <span className="text-sm font-bold mt-1">Schede</span>
+                    <span className="text-xs font-bold mt-1">Schede</span>
                 </button>
                 <button 
                     onClick={() => setTab('graph')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'graph' ? 'text-amber-700 bg-amber-50 shadow-inner' : 'text-stone-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all ${tab === 'graph' ? 'text-amber-700 bg-amber-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Network size={20} />
-                    <span className="text-sm font-bold mt-1">Grafico</span>
+                    <span className="text-xs font-bold mt-1">Grafico</span>
                 </button>
                 <button 
                     onClick={() => setTab('campi')} 
-                    className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Settings2 size={20} />
-                    <span className="text-sm font-bold mt-1">Campi</span>
+                    <span className="text-xs font-bold mt-1">Campi</span>
                 </button>
             </nav>
 

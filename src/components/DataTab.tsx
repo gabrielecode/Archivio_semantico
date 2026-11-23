@@ -32,6 +32,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const [sortField, setSortField] = useState<keyof Rec>('modificato');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [editing, setEditing] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
 
   const filteredRecords = useMemo(() => {
@@ -126,6 +127,26 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
       template.fields.find(f => f.type === 'text')?.id;
     const titolo = (titleFieldId ? String(campi[titleFieldId] ?? '').trim() : '') || draft.titolo || template.name;
+
+    if (isNew) {
+      const existing = archive.records.find(
+        r => r.titolo.trim().toLowerCase() === titolo.trim().toLowerCase() && r.tipo === template.id
+      );
+      if (existing) {
+        setConfirmDialog({
+          title: 'Scheda già esistente',
+          message: 'Esiste già una scheda con questo nome. Vuoi aprirla?',
+          onConfirm: () => {
+            setSelectedId(existing.id);
+            setEditing(false);
+            setFormDirty(false);
+            setConfirmDialog(null);
+          },
+          onCancel: () => setConfirmDialog(null)
+        });
+        return;
+      }
+    }
     
     const updated: Rec = {
       ...draft,
@@ -145,6 +166,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     
     setDraft(withOutlinks);
     setIsNew(false);
+    setFormDirty(false);
     setEditing(false);
     setDirty(true);
     onToast?.('Scheda salvata ✓');
@@ -237,6 +259,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     setIsNew(true);
     setSelectedId(newRec.id);
     setEditing(true);
+    setFormDirty(false);
     setView('Modulo');
     setTemplateId(null);
   };
@@ -251,7 +274,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleDelete = () => {
     setConfirmDialog({
         title: t('deleteRecordTitle'),
-        message: t('deleteRecordMsg'),
+        message: 'Eliminare questa scheda? Non si può annullare.',
         onConfirm: () => { 
             const remaining = archive.records.filter(r => r.id !== selectedId);
             setArchive(a => ({...a, records: a.records.filter(r => r.id !== selectedId)}));
@@ -323,7 +346,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             />
                         )}
 
-                        <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">+ Nuova scheda</Button>
+                        {!editing && <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">+ Nuova scheda</Button>}
                         <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
                         {!editing && (
                           <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
@@ -344,16 +367,33 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                         initialValues={isNew ? {} : draft} 
                         templateId={templateId || undefined}
                         onSave={handleTemplateSave}
+                        onDirty={setFormDirty}
                         onCancel={() => {
-                          setEditing(false);
-                          if (isNew) setSelectedId(filteredRecords[0]?.id || null);
+                          const closeForm = () => {
+                            setFormDirty(false);
+                            setEditing(false);
+                            if (isNew) setSelectedId(filteredRecords[0]?.id || null);
+                          };
+                          if (formDirty) {
+                            setConfirmDialog({
+                              title: 'Modifiche non salvate',
+                              message: 'Uscire senza salvare?',
+                              onConfirm: () => {
+                                setConfirmDialog(null);
+                                closeForm();
+                              },
+                              onCancel: () => setConfirmDialog(null)
+                            });
+                          } else {
+                            closeForm();
+                          }
                         }}
                       />
                     ) : (
                       <div className="space-y-8">
                         <CardPreview record={draft} />
                         <div className="flex justify-center">
-                          <Button variant="outline" size="lg" onClick={() => setEditing(true)} className="w-full sm:w-auto px-12 rounded-2xl">
+                          <Button variant="outline" size="lg" onClick={() => { setFormDirty(false); setEditing(true); }} className="w-full sm:w-auto px-12 rounded-2xl">
                             Modifica Campi Scheda
                           </Button>
                         </div>
@@ -394,7 +434,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                 )}
             </div>
         ) : (
-            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-x-hidden max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-bg-alt/80 text-text-muted text-[11px] font-bold uppercase tracking-widest border-b border-border-primary">
@@ -405,7 +445,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-bg-alt/50">
-                        {filteredRecords.slice(0, 50).map(r => (
+                        {filteredRecords.map(r => (
                             <tr key={r.id} className="group hover:bg-stone-50/50 cursor-pointer transition-colors" onClick={() => {setSelectedId(r.id); setView('Modulo');}}>
                                 <td className="px-8 py-4">
                                     <div className="font-bold text-text-primary group-hover:text-accent transition-colors">{r.titolo}</div>
