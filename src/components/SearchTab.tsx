@@ -1,5 +1,5 @@
 import React, {useState, useRef, useMemo, useEffect} from 'react';
-import {Search, History, Sparkles} from 'lucide-react';
+import {Search, History} from 'lucide-react';
 import {Archive, EMB_DIM, Template} from '../types';
 import {fetchEmbeddings} from '../utils/api';
 import {Button, EmptyState} from './ui';
@@ -80,13 +80,6 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
             // ignore
         }
     };
-
-    const examples = [
-        'Deficienza di Qi di Milza',
-        'Insonnia e calore al cuore',
-        'Dolore lombare e freddo',
-        'Stasi di Qi di Fegato'
-    ];
 
     const templateNameMap = useMemo(() => new Map(templates.map(tpl => [tpl.id, tpl.name])), []);
     const allTipi = useMemo(() => Array.from(new Set(archive.records.map(r => r.tipo).filter(Boolean))), [archive.records]);
@@ -227,9 +220,18 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                         <input 
                             ref={searchRef}
                             value={query} 
-                            onChange={e => setQuery(e.target.value)} 
+                            onChange={e => {
+                                const val = e.target.value;
+                                setQuery(val);
+                                if (val.trim().length >= 2) {
+                                    setError(null);
+                                    setResults(lexicalSearch(val).sort((a, b) => b.score - a.score));
+                                } else {
+                                    setResults(null);
+                                }
+                            }} 
                             onKeyDown={e => e.key === 'Enter' && handleSearch()} 
-                            placeholder={`${t('searchPlaceholder')} (premi '/' per cercare)`} 
+                            placeholder="Cerca una scheda per nome o parola" 
                             className="w-full pl-4 pr-10 py-3 text-base rounded-xl border border-border-primary bg-card-bg text-text-primary focus:ring-2 focus:ring-accent focus:outline-none min-h-[44px]" 
                         />
                         {query && (
@@ -247,21 +249,8 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                     </Button>
                 </div>
 
-                <div className="space-y-2 pt-1">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
-                        <span className="font-medium flex items-center gap-1"><Sparkles size={14} className="text-accent"/> {t('searchExamples')}</span>
-                        {examples.map(ex => (
-                            <button 
-                                key={ex} 
-                                onClick={() => { setQuery(ex); performSearch(ex); }} 
-                                className="px-3 py-1 bg-bg-alt hover:bg-accent/10 hover:text-accent rounded-lg text-xs font-medium border border-border-primary transition-colors"
-                            >
-                                {ex}
-                            </button>
-                        ))}
-                    </div>
-
-                    {recent.length > 0 && (
+                {recent.length > 0 && (
+                    <div className="space-y-2 pt-1">
                         <div className="flex flex-wrap items-center gap-2 text-sm text-text-muted pt-1">
                             <span className="font-medium flex items-center gap-1"><History size={14} className="text-text-muted/50"/> {t('recentSearches')}:</span>
                             {recent.map(r => (
@@ -277,8 +266,8 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                                 {t('clearHistory')}
                             </button>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
             
             <div className="flex flex-wrap gap-4">

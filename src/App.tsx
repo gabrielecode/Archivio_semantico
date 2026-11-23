@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network, Moon, Sun} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network, Moon, Sun, Type} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
@@ -35,6 +35,13 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
     }, [theme]);
 
     const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
+    const [bigText, setBigText] = useState<boolean>(() => localStorage.getItem('tcm_big') === '1');
+
+    useEffect(() => {
+        document.documentElement.style.fontSize = bigText ? '18px' : '16px';
+        localStorage.setItem('tcm_big', bigText ? '1' : '0');
+    }, [bigText]);
 
     const [tab, setTab] = useState<'ricerca' | 'schede' | 'campi' | 'graph'>('ricerca');
     const [archive, setArchive] = useState<Archive | null>(null);
@@ -278,6 +285,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}} icon={Cloud}>{t('driveBackupMenu')}</Button>
                                         <div className="h-px bg-border-primary my-1 mx-2" />
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { setLang(lang === 'it' ? 'de' : 'it'); setShowMenu(false); }} icon={Globe}>{lang === 'it' ? 'Lingua: Italiano' : 'Sprache: Deutsch'}</Button>
+                                        <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { setBigText(prev => !prev); setShowMenu(false); }} icon={Type}>{bigText ? 'Testo normale' : 'Testo grande'}</Button>
                                         {onOpenAdmin && (
                                             <Button variant="ghost" className="w-full justify-start text-sm text-accent font-bold" onClick={() => {onOpenAdmin(); setShowMenu(false);}} icon={Shield}>Area Admin</Button>
                                         )}
@@ -291,7 +299,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                 </div>
 
                 {/* Sub-header status bar */}
-                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-[11px] h-8 bg-bg-alt/80 border-t border-border-primary">
+                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm h-8 bg-bg-alt/80 border-t border-border-primary">
                     <div className="flex items-center gap-4">
                         <div className={saveState==='error'?'text-red-600 font-bold':''}>
                             {saveState==='saving' ? t('saving') : 
@@ -338,7 +346,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     <SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} updateArchive={updateArchive} />
                 </div>
                 <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'schede' ? '' : 'hidden'}`}>
-                    <DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} />
+                    <DataTab archive={archive} setArchive={a => updateArchive(typeof a==='function' ? a : () => a)} setDirty={setDirty} onGoStructure={() => setTab('campi')} selectedId={selectedId} setSelectedId={setSelectedId} setConfirmDialog={setConfirmDialog} onToast={m => setToast({message: m, type: 'success'})} />
                 </div>
                 <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'graph' ? '' : 'hidden'}`}>
                     <GraphTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} />
@@ -355,35 +363,35 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Search size={20} />
-                    <span className="text-[10px] font-bold mt-1">Cerca</span>
+                    <span className="text-sm font-bold mt-1">Cerca</span>
                 </button>
                 <button 
                     onClick={() => setTab('schede')} 
                     className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'schede' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Database size={20} />
-                    <span className="text-[10px] font-bold mt-1">Schede</span>
+                    <span className="text-sm font-bold mt-1">Schede</span>
                 </button>
                 <button 
                     onClick={() => setTab('graph')} 
                     className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'graph' ? 'text-amber-700 bg-amber-50 shadow-inner' : 'text-stone-400'}`}
                 >
                     <Network size={20} />
-                    <span className="text-[10px] font-bold mt-1">Grafico</span>
+                    <span className="text-sm font-bold mt-1">Grafico</span>
                 </button>
                 <button 
                     onClick={() => setTab('campi')} 
                     className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'campi' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
                 >
                     <Settings2 size={20} />
-                    <span className="text-[10px] font-bold mt-1">Campi</span>
+                    <span className="text-sm font-bold mt-1">Campi</span>
                 </button>
             </nav>
 
             <footer className="text-center p-12 text-sm text-text-muted border-t border-border-primary mt-20 bg-card-bg">
                 <div className="max-w-2xl mx-auto space-y-4">
                     <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
-                    <p className="text-[11px] opacity-60">{t('disclaimerSimilarity')}</p>
+                    <p className="text-sm opacity-60">{t('disclaimerSimilarity')}</p>
                     <div className="flex items-center justify-center gap-4 text-xs text-text-muted pt-1">
                         <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-accent underline">Informativa sulla Privacy</a>
                         <span>•</span>

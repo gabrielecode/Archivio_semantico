@@ -1,7 +1,7 @@
 import {useState, useMemo, useEffect, useCallback} from 'react';
 import {Archive, Rec} from '../types';
 import {Button, Badge, Field, inputCls, EmptyState} from './ui';
-import {Plus, ChevronLeft, Save, Trash2, Copy, Table as TableIcon, FileText, ChevronRight, Search} from 'lucide-react';
+import {ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight} from 'lucide-react';
 import {useTranslation} from '../utils/i18n';
 import {updateRecordOutlinks} from '../utils/parser';
 import {WikiContent} from './WikiContent';
@@ -14,18 +14,19 @@ import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
 
-export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog}: {
+export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog, onToast}: {
   archive: Archive, 
   setArchive: (a: Archive | ((a: Archive) => Archive)) => void, 
   setDirty: (d: boolean) => void, 
   onGoStructure: () => void,
   selectedId: string | null,
   setSelectedId: (id: string | null) => void,
-  setConfirmDialog: (dialog: any) => void
+  setConfirmDialog: (dialog: any) => void,
+  onToast?: (m: string) => void
 }) {
   const {t, lang} = useTranslation();
   const [view, setView] = useState<'Modulo' | 'Tabella'>('Modulo');
-  const [searchTerm, setSearchTerm] = useState('');
+  const searchTerm = '';
   const [draft, setDraft] = useState<Rec | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [sortField, setSortField] = useState<keyof Rec>('modificato');
@@ -113,6 +114,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     setIsNew(false);
     setEditing(false);
     setDirty(true);
+    onToast?.('Scheda salvata ✓');
+    window.scrollTo({top:0});
   };
 
   const handleTemplateSave = (campi: any, template: Template) => {
@@ -144,6 +147,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     setIsNew(false);
     setEditing(false);
     setDirty(true);
+    onToast?.('Scheda salvata ✓');
+    window.scrollTo({top:0});
   };
 
   const handleCreateRecordFromWiki = (title: string) => {
@@ -277,7 +282,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
   return (
     <div className="space-y-8 text-text-primary text-base">
-        <div className="sticky top-[110px] bg-bg-primary/80 backdrop-blur-sm z-10 py-4 -mx-6 px-6">
+        <div className="sticky top-[110px] bg-bg-primary/95 z-10 py-4 -mx-6 px-6">
             <div className="max-w-7xl mx-auto space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4 bg-card-bg p-4 rounded-3xl border border-border-primary shadow-sm">
                     <div className="flex items-center gap-1 bg-bg-alt p-1 rounded-2xl border border-border-primary">
@@ -318,7 +323,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             />
                         )}
 
-                        <Button variant="ghost" onClick={handleNuovo} icon={Plus}>Nuova</Button>
+                        <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">+ Nuova scheda</Button>
                         <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
                         {!editing && (
                           <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
@@ -326,19 +331,6 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                           </Button>
                         )}
                     </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted/50" />
-                        <input 
-                            placeholder="Cerca tra le tue schede..." 
-                            value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)} 
-                            className={`${inputCls} pl-11 h-12 shadow-sm border-stone-200/60 focus:border-emerald-500`}
-                        />
-                    </div>
-                    <Button variant="secondary" onClick={() => setSearchTerm('')} className="h-12 px-6">Tutte</Button>
                 </div>
             </div>
         </div>

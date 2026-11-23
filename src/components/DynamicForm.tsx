@@ -8,6 +8,23 @@ import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
 
+const TEMPLATE_DESCRIPTIONS: Record<string, string> = {
+  mcc: 'Punti di agopuntura medicina classica',
+  mtc: 'Punti di agopuntura medicina tradizionale',
+  dietetica: 'Alimenti e proprietà terapeutiche',
+  moxibustione: 'Punti e tecniche di moxibustione',
+  fitoterapia: 'Erbe, rimedi e formule vegetali',
+  guasha: 'Punti e tecniche di guasha',
+  oli_essenziali: 'Oli essenziali e uso terapeutico',
+  patologie: 'Patologie, costituzioni e sindromi energetiche',
+  dizionario: 'Termini e ideogrammi di riferimento',
+  testi_classici: 'Brani e citazioni da testi classici',
+  dinastie: 'Dinastie e storia della Cina',
+  libri: 'Libri, dispense, bibliografia e appunti',
+  medici: 'Medici e figure storiche cinesi',
+  fisiologia: 'Fisiologia secondo MCC e MTC'
+};
+
 interface DynamicFormProps {
   initialValues?: any;
   templateId?: string;
@@ -66,7 +83,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold text-stone-900 uppercase tracking-tight mb-0.5 truncate">{t.name}</div>
-                  <div className="text-[10px] text-stone-500 line-clamp-1">Nuova scheda {t.name.toLowerCase()}</div>
+                  <div className="text-sm text-stone-500 line-clamp-1">{TEMPLATE_DESCRIPTIONS[t.id] || t.name}</div>
                 </div>
                 <div className="text-stone-300 group-hover:text-emerald-500 transition-all opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
                   <ChevronLeft size={16} className="rotate-180" />
@@ -98,7 +115,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-stone-900 leading-tight">Nuova Scheda</h3>
                     {selectedTemplate.id === 'mcc' && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200">
                         <Volume2 size={12} className="text-blue-600" /> Pronuncia zh-CN
                       </span>
                     )}
@@ -157,7 +174,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                                     title="Ascolta la pronuncia vocale in Cinese Semplificato (zh-CN)"
                                   />
                                 </div>
-                                <p className="text-[11px] text-stone-500">
+                                <p className="text-sm text-stone-500">
                                   💡 Scrivi il nome del punto in cinese o pinyin e clicca su <strong>Pronuncia</strong> per ascoltare la voce in cinese semplificato.
                                 </p>
                               </div>
@@ -207,7 +224,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel }
                                     title="Ascolta la pronuncia vocale del punto"
                                   />
                                 </div>
-                                <div className="flex items-center justify-between text-[11px] text-stone-500">
+                                <div className="flex items-center justify-between text-sm text-stone-500">
                                   <span>🔊 Clicca su <strong>Pronuncia</strong> per ascoltare in Cinese Semplificato (zh-CN).</span>
                                   {!values['pronuncia'] && (values['nome_principale'] || values['ideogramma']) && (
                                     <button

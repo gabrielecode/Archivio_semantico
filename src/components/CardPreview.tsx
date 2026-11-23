@@ -17,7 +17,7 @@ export const CardPreview = ({ record }: { record: Rec }) => {
       {/* Header */}
       <div className="p-6 text-white" style={{ backgroundColor: template.cardColor }}>
         <div className="flex items-center justify-between mb-1">
-          <div className="text-[10px] uppercase tracking-widest font-bold opacity-70">
+          <div className="text-sm uppercase tracking-widest font-bold opacity-70">
             {template.name}
           </div>
           {audioTarget && (
@@ -45,7 +45,7 @@ export const CardPreview = ({ record }: { record: Rec }) => {
 
           return (
             <div key={f.id} className="space-y-1">
-              <div className="text-[10px] uppercase font-bold text-stone-400 tracking-wider flex items-center justify-between">
+              <div className="text-sm uppercase font-bold text-stone-400 tracking-wider flex items-center justify-between">
                 <span>{f.label}</span>
                 {isAudioField && typeof val === 'string' && val.trim() && (
                   <PronunciationButton
@@ -114,7 +114,7 @@ export const CardPreview = ({ record }: { record: Rec }) => {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-stone-50 border-t flex items-center justify-between text-[10px] text-stone-400 font-bold">
+      <div className="px-6 py-4 bg-stone-50 border-t flex items-center justify-between text-sm text-stone-400 font-bold">
         <span>ID: {record.id.slice(0, 8)}</span>
         <span>MODIFICATO: {new Date(record.modificato).toLocaleDateString()}</span>
       </div>
