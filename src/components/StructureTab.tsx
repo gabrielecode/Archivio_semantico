@@ -6,7 +6,7 @@ import {DEFAULT_CAMPI} from '../utils/archive';
 import {useTranslation} from '../utils/i18n';
 
 export function StructureTab({archive, setArchive, setDirty}: {
-    archive: Archive, setArchive: (a: Archive) => void, setDirty: (d: boolean) => void
+    archive: Archive, setArchive: (a: Archive | ((a: Archive) => Archive)) => void, setDirty: (d: boolean) => void
 }) {
     const {t} = useTranslation();
     const [newTipo, setNewTipo] = useState('');
@@ -17,15 +17,10 @@ export function StructureTab({archive, setArchive, setDirty}: {
 
     const slugify = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 
-    const updateRecords = (updateFn: (r: any) => any) => {
-        setArchive({...archive, records: archive.records.map(updateFn)});
-        setDirty(true);
-    };
-
     const addTipo = () => {
         const t = newTipo.trim();
         if (t && !archive.schema.tipi.includes(t)) {
-            setArchive({...archive, schema: {...archive.schema, tipi: [...archive.schema.tipi, t]}});
+            setArchive(a => a.schema.tipi.includes(t) ? a : {...a, schema: {...a.schema, tipi: [...a.schema.tipi, t]}});
             setDirty(true);
             setNewTipo('');
         }
@@ -33,11 +28,12 @@ export function StructureTab({archive, setArchive, setDirty}: {
 
     const renameTipo = (oldT: string, newT: string) => {
         if (oldT === newT) return;
-        setArchive({
-            ...archive, 
-            schema: {...archive.schema, tipi: archive.schema.tipi.map(t => t === oldT ? newT : t)}
-        });
-        updateRecords(r => r.tipo === oldT ? {...r, tipo: newT, embHash: ''} : r);
+        setArchive(a => ({
+            ...a,
+            schema: {...a.schema, tipi: a.schema.tipi.map(t => t === oldT ? newT : t)},
+            records: a.records.map(r => r.tipo === oldT ? {...r, tipo: newT, embHash: ''} : r)
+        }));
+        setDirty(true);
         setEditingTipo(null);
     };
 
@@ -48,11 +44,16 @@ export function StructureTab({archive, setArchive, setDirty}: {
             message: `${t('deleteTipoMsg')} "${tipo}"? Verranno modificate ${count} voci.`,
             danger: true,
             onConfirm: () => {
-                setArchive({
-                    ...archive, 
-                    schema: {...archive.schema, tipi: archive.schema.tipi.filter(t => t !== tipo)}
+                setArchive(a => {
+                    const nextTipi = a.schema.tipi.filter(t => t !== tipo);
+                    const fallbackTipo = nextTipi[0] || '';
+                    return {
+                        ...a,
+                        schema: {...a.schema, tipi: nextTipi},
+                        records: a.records.map(r => r.tipo === tipo ? {...r, tipo: fallbackTipo, embHash: ''} : r)
+                    };
                 });
-                updateRecords(r => r.tipo === tipo ? {...r, tipo: archive.schema.tipi[0], embHash: ''} : r);
+                setDirty(true);
                 setConfirmDelete(null);
             },
             onCancel: () => setConfirmDelete(null)
@@ -68,16 +69,16 @@ export function StructureTab({archive, setArchive, setDirty}: {
         while (archive.schema.campi.some(c => c.chiave === chiave)) {
             chiave = `${baseChiave}_${counter++}`;
         }
-        setArchive({...archive, schema: {...archive.schema, campi: [...archive.schema.campi, {chiave, etichetta}]}});
+        setArchive(a => ({...a, schema: {...a.schema, campi: [...a.schema.campi, {chiave, etichetta}]}}));
         setDirty(true);
         setNewCampoEtichetta('');
     };
 
     const renameCampo = (chiave: string, etichetta: string) => {
-        setArchive({
-            ...archive,
-            schema: {...archive.schema, campi: archive.schema.campi.map(c => c.chiave === chiave ? {...c, etichetta} : c)}
-        });
+        setArchive(a => ({
+            ...a,
+            schema: {...a.schema, campi: a.schema.campi.map(c => c.chiave === chiave ? {...c, etichetta} : c)}
+        }));
         setDirty(true);
         setEditingCampo(null);
     };
@@ -88,15 +89,16 @@ export function StructureTab({archive, setArchive, setDirty}: {
             message: t('deleteCampoMsg'),
             danger: true,
             onConfirm: () => {
-                setArchive({
-                    ...archive,
-                    schema: {...archive.schema, campi: archive.schema.campi.filter(c => c.chiave !== chiave)}
-                });
-                updateRecords(r => {
-                    const newCampi = {...r.campi};
-                    delete newCampi[chiave];
-                    return {...r, campi: newCampi, embHash: ''};
-                });
+                setArchive(a => ({
+                    ...a,
+                    schema: {...a.schema, campi: a.schema.campi.filter(c => c.chiave !== chiave)},
+                    records: a.records.map(r => {
+                        const newCampi = {...r.campi};
+                        delete newCampi[chiave];
+                        return {...r, campi: newCampi, embHash: ''};
+                    })
+                }));
+                setDirty(true);
                 setConfirmDelete(null);
             },
             onCancel: () => setConfirmDelete(null)

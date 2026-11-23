@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {Archive} from './types';
 import {newArchive, exportArchiveJson} from './utils/archive';
 import {Button, Toast, ConfirmDialog, Modal} from './components/ui';
-import {Leaf, Search, Database, Settings2, LogOut, Menu, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network, Moon, Sun} from 'lucide-react';
+import {Leaf, Search, Database, Settings2, LogOut, RefreshCw, HelpCircle, Globe, Cloud, Plus, Shield, Network, Moon, Sun} from 'lucide-react';
 import {DataTab} from './components/DataTab';
 import {StructureTab} from './components/StructureTab';
 import {SearchTab} from './components/SearchTab';
@@ -53,6 +53,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
     const storeRef = useRef<Store | null>(null);
     const [storeInstance, setStoreInstance] = useState<Store | null>(null);
     const archiveRef = useRef<Archive | null>(null);
+    const archiveIdRef = useRef<string | null>(null);
     const timerRef = useRef<number | null>(null);
     const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
     const [confirmDialog, setConfirmDialog] = useState<any>(null);
@@ -75,35 +76,45 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
 
     useEffect(() => {
         if (!user) return;
+        let cancelled = false;
+        let store: Store | null = null;
         (async () => {
             try {
-                const store = await openStore(user.id);
-                storeRef.current = store;
-                setStoreInstance(store);
-                const id = await store.getLast();
+                const s = await openStore(user.id);
+                if (cancelled) { s.close(); return; }
+                store = s;
+                storeRef.current = s;
+                setStoreInstance(s);
+                const id = await s.getLast();
                 let lastId = id;
                 if (!lastId) {
-                    const list = await store.list();
+                    const list = await s.list();
                     if (list.length > 0) lastId = list[0].id;
                     else {
                         const defaultName = lang === 'de' ? 'Mein Archiv' : 'Il mio archivio';
                         const a = newArchive(defaultName);
                         lastId = defaultName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '-' + crypto.randomUUID().slice(0, 6);
-                        await store.put(lastId, a);
-                        await store.setLast(lastId);
+                        await s.put(lastId, a);
+                        await s.setLast(lastId);
                     }
                 }
-                const a = await store.get(lastId!);
+                const a = await s.get(lastId!);
+                if (cancelled) return;
                 if (a) { 
                     if ((a as any).__upgraded) setToast({message: lang === 'de' ? 'Index neu generieren' : 'Indice da rigenerare', type: 'error'});
-                    setArchive(a); setArchiveId(lastId); archiveRef.current = a; 
+                    setArchive(a); setArchiveId(lastId); archiveIdRef.current = lastId; archiveRef.current = a; 
                 }
                 setLoading(false);
-            } catch (e: any) { setSaveError(e.message); setLoading(false); }
+            } catch (e: any) { if (!cancelled) { setSaveError(e.message); setLoading(false); } }
         })();
-        const unsub = subscribe(user.id, (msg) => { if (msg.id === archiveId) setConflict(true); });
-        return () => unsub();
-    }, [user?.id, archiveId, lang]);
+        const unsub = subscribe(user.id, (msg) => { if (msg.id === archiveIdRef.current) setConflict(true); });
+        return () => {
+            cancelled = true;
+            unsub();
+            store?.close();
+            if (storeRef.current === store) storeRef.current = null;
+        };
+    }, [user?.id]);
 
     useEffect(() => {
         archiveRef.current = archive;
@@ -115,11 +126,14 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
 
     const flush = async () => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        if (!dirty || !storeRef.current || !archiveId || conflict) return;
+        const snapshot = archiveRef.current;
+        if (!dirty || !storeRef.current || !archiveId || !snapshot || conflict) return;
         setSaveState('saving');
         try {
-            await storeRef.current.put(archiveId, archiveRef.current!);
-            setDirty(false);
+            await storeRef.current.put(archiveId, snapshot);
+            if (archiveRef.current === snapshot) {
+                setDirty(false);
+            }
             setSaveState('saved');
             setLastSavedTime(new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
         } catch (e: any) { setSaveState('error'); setSaveError(e.message); }
@@ -163,22 +177,28 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
         });
     };
 
-    const createNewArchive = () => {
+    const createNewArchive = async () => {
+        await flush();
         const baseName = lang === 'de' ? 'Neues Archiv' : 'Nuovo Archivio';
         const a = newArchive(baseName);
         const id = 'archivio_' + crypto.randomUUID().slice(0, 8);
-        flush();
+        if (storeRef.current) {
+            await storeRef.current.put(id, a);
+            await storeRef.current.setLast(id);
+        }
+        archiveRef.current = a;
+        archiveIdRef.current = id;
         setArchive(a);
         setArchiveId(id);
-        archiveRef.current = a;
-        setDirty(true);
+        setSelectedId(null);
+        setDirty(false);
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-bg-primary"><RefreshCw className="animate-spin text-accent" size={32} /></div>;
-    if (!archive) return <div className="min-h-screen flex items-center justify-center text-text-primary p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveRef.current=a;}}>Continua</Button></div>;
+    if (!archive) return <div className="min-h-screen flex items-center justify-center text-text-primary p-4 text-center">{saveError}<br/><Button onClick={() => {const a=newArchive('Locale'); setArchive(a); setArchiveId('local'); archiveIdRef.current='local'; archiveRef.current=a;}}>Continua</Button></div>;
 
     return (
-        <div className="min-h-screen bg-bg-primary pb-20 sm:pb-0 text-text-primary font-sans antialiased">
+        <div className="min-h-screen bg-bg-primary pb-24 lg:pb-0 text-text-primary font-sans antialiased">
             <header className="sticky top-0 bg-card-bg/80 backdrop-blur-md border-b border-border-primary z-30">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
                     {/* Zone 1: Brand */}
@@ -247,6 +267,12 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                                         <p className="text-xs text-text-muted truncate">{currentUser.email}</p>
                                     </div>
                                     <div className="p-2 space-y-1">
+                                        <div className="sm:hidden space-y-1">
+                                            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowArchivePicker(true); setShowMenu(false);}} icon={Database}>{t('archives')}</Button>
+                                            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowGuideModal(true); setShowMenu(false);}} icon={HelpCircle}>{t('instructions')}</Button>
+                                            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {toggleTheme(); setShowMenu(false);}} icon={theme === 'light' ? Moon : Sun}>{theme === 'light' ? 'Tema scuro' : 'Tema chiaro'}</Button>
+                                            <div className="h-px bg-border-primary my-1 mx-2" />
+                                        </div>
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {createNewArchive(); setShowMenu(false);}} icon={Plus}>{t('newArchive')}</Button>
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => { exportArchiveJson(archive); setShowMenu(false); }} icon={Cloud}>{t('exportJson')}</Button>
                                         <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => {setShowDriveDialog(true); setShowMenu(false);}} icon={Cloud}>{t('driveBackupMenu')}</Button>
@@ -261,9 +287,6 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                                 </div>
                             )}
                         </div>
-                        <button className="lg:hidden p-2 text-text-muted" onClick={() => setTab(tab === 'ricerca' ? 'schede' : 'ricerca')}>
-                            <Menu size={24} />
-                        </button>
                     </div>
                 </div>
 
@@ -293,7 +316,23 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     </div>
                 )}
             </header>
-            
+            <EmbedBar
+                archive={archive}
+                user={currentUser}
+                onNeedLogin={() => {}}
+                toast={(message, type) => setToast({message, type})}
+                onApply={(results: { id: string; hash: string; chunks: any[] }[]) => {
+                    const map = new Map(results.map(res => [res.id, res]));
+                    updateArchive(a => ({
+                        ...a,
+                        records: a.records.map(r => {
+                            const res = map.get(r.id);
+                            return res ? {...r, embHash: res.hash, chunks: res.chunks} : r;
+                        })
+                    }));
+                }}
+            />
+
             <main id="main" className="max-w-7xl mx-auto px-6 py-8">
                 <div role="tabpanel" className={`animate-in fade-in duration-500 ${tab === 'ricerca' ? '' : 'hidden'}`}>
                     <SearchTab archive={archive} onOpenRec={(id: string)=>{setSelectedId(id); setTab('schede');}} onGoData={()=>setTab('schede')} updateArchive={updateArchive} />
@@ -310,7 +349,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
             </main>
 
             {/* Mobile Fixed Bottom Navigation */}
-            <nav className="sm:hidden fixed bottom-6 inset-x-6 h-16 bg-card-bg/90 backdrop-blur-xl border border-border-primary flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
+            <nav className="lg:hidden fixed bottom-6 inset-x-6 h-16 bg-card-bg/90 backdrop-blur-xl border border-border-primary flex items-center justify-around px-2 z-30 shadow-2xl rounded-3xl" aria-label="Navigazione mobile">
                 <button 
                     onClick={() => setTab('ricerca')} 
                     className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${tab === 'ricerca' ? 'text-accent bg-bg-primary shadow-inner' : 'text-text-muted'}`}
@@ -341,7 +380,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                 </button>
             </nav>
 
-            <footer className="text-center p-12 text-sm text-text-muted border-t border-border-primary mt-20 bg-card-bg hidden sm:block">
+            <footer className="text-center p-12 text-sm text-text-muted border-t border-border-primary mt-20 bg-card-bg">
                 <div className="max-w-2xl mx-auto space-y-4">
                     <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
                     <p className="text-[11px] opacity-60">{t('disclaimerSimilarity')}</p>
@@ -359,7 +398,7 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {confirmDialog && <ConfirmDialog {...confirmDialog} />}
-            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onCreate={() => {}} onImported={async (a: any) => { if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); await storeRef.current!.setLast(id); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
+            {showArchivePicker && <ArchivePicker store={storeRef.current!} currentId={archiveId} onOpen={async (id: string) => { await flush(); const a = await storeRef.current!.get(id); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); setArchive(a); archiveRef.current=a; setArchiveId(id); archiveIdRef.current=id; await storeRef.current!.setLast(id); setSelectedId(null); setDirty(false); }} onCreate={async () => { setShowArchivePicker(false); await createNewArchive(); }} onImported={async (a: any) => { await flush(); if ((a as any).__upgraded) setToast({message: 'Indice da rigenerare', type: 'error'}); const id = crypto.randomUUID(); await storeRef.current!.put(id, a); setArchive(a); archiveRef.current=a; setArchiveId(id); archiveIdRef.current=id; await storeRef.current!.setLast(id); setSelectedId(null); setDirty(false); }} onClose={() => setShowArchivePicker(false)} toast={(msg: string, type: 'success' | 'error') => setToast({message: msg, type})} />}
             
             {showGuideModal && (
                 <Modal title={t('guideTitle')} onClose={() => setShowGuideModal(false)} className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -402,10 +441,14 @@ export default function App({user, onLogout, onOpenAdmin}: {user: {id: string, n
                     driveBackup={driveBackup} 
                     onClose={() => setShowDriveDialog(false)} 
                     onOpenArchive={async (id: string, a: Archive) => {
+                        await flush();
                         setArchive(a); 
                         archiveRef.current = a; 
                         setArchiveId(id); 
+                        archiveIdRef.current = id;
                         await storeInstance.setLast(id);
+                        setSelectedId(null);
+                        setDirty(false);
                     }} 
                     toast={(msg, type) => setToast({message: msg, type})} 
                 />

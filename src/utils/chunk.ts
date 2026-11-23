@@ -33,7 +33,7 @@ export function buildHeader(rec: Rec): string {
     const tagsPart = rec.tags.length > 0 ? ` | tag: ${rec.tags.join(', ')}` : '';
     const contentPart = rec.contenuto ? ` | contenuto: ${rec.contenuto.replace(/\n/g, ' ')}` : '';
     
-    return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}${contentPart}`.substring(0, 3500);
+    return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}${contentPart}`.substring(0, 1200);
 }
 
 export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] {
@@ -49,7 +49,7 @@ export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] 
     }
 
     let currentText = '';
-    const MAX_LEN = 1900 - header.length - 2; // header + ": " + text
+    const MAX_LEN = Math.max(500, 1900 - header.length - 2); // header + ": " + text
     const OVERLAP = 150;
 
     function addChunk(text: string) {

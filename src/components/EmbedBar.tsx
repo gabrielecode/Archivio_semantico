@@ -10,6 +10,7 @@ export function EmbedBar({archive, user, onNeedLogin, onApply, toast}: {
     const {t} = useTranslation();
     const pending = useMemo(() => archive.records.filter(needsEmbedding).length, [archive.records]);
     const [running, setRunning] = useState(false);
+    const [failed, setFailed] = useState(false);
     const [progress, setProgress] = useState(0);
     const [total, setTotal] = useState(0);
     const abortController = useRef<AbortController | null>(null);
@@ -47,17 +48,13 @@ export function EmbedBar({archive, user, onNeedLogin, onApply, toast}: {
         }
 
         if (errore) {
-            toast(t('connectionError'), 'error');
-            setTimeout(() => {
-                if (pending > 0 && user && !running) {
-                    runEmbed(false);
-                }
-            }, 10000);
+            setFailed(true);
+            toast(errore, 'error');
         }
     };
 
     useEffect(() => {
-        if (pending > 0 && user && !running) {
+        if (pending > 0 && user && !running && !failed) {
             if (autoRunTimer.current) clearTimeout(autoRunTimer.current);
             autoRunTimer.current = setTimeout(() => {
                 const now = Date.now();
@@ -70,7 +67,7 @@ export function EmbedBar({archive, user, onNeedLogin, onApply, toast}: {
         return () => {
             if (autoRunTimer.current) clearTimeout(autoRunTimer.current);
         };
-    }, [pending, user]);
+    }, [pending, user, failed]);
 
     return (
         <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-sm text-stone-800">
@@ -90,8 +87,8 @@ export function EmbedBar({archive, user, onNeedLogin, onApply, toast}: {
             </div>
             <div className="flex gap-2">
                 {pending > 0 && !running && (
-                    <Button variant="primary" onClick={() => runEmbed(false)} className="text-sm py-1.5 px-3 min-h-[36px]">
-                        {t('prepareNow')}
+                    <Button variant="primary" onClick={() => { setFailed(false); runEmbed(false); }} className="text-sm py-1.5 px-3 min-h-[36px]">
+                        {failed ? 'Riprova' : t('prepareNow')}
                     </Button>
                 )}
                 {running && (

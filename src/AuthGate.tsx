@@ -9,8 +9,8 @@ import {
     signOut, 
     User 
 } from 'firebase/auth';
-import { auth, googleProvider, db } from './lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from './lib/firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Button, Modal } from './components/ui';
 import { RefreshCw, LogOut, Leaf, Shield, Laptop, Smartphone, Search, ArrowRight, HelpCircle, Globe, Cloud, Eye, EyeOff } from 'lucide-react';
 import App from './App';
@@ -35,27 +35,78 @@ export default function AuthGate() {
     const [showAdmin, setShowAdmin] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
             setFirebaseUser(user);
             setLoadingAuth(false);
-            if (user) {
-                try {
-                    await setDoc(doc(db, 'users', user.uid), {
-                        uid: user.uid,
-                        email: user.email || '',
-                        displayName: user.displayName || user.email?.split('@')[0] || 'Utente',
-                        lastLogin: new Date().toISOString(),
-                        createdAt: user.metadata.creationTime ? new Date(user.metadata.creationTime).toISOString() : new Date().toISOString()
-                    }, { merge: true });
-                } catch (e) {
-                    console.error('Error saving user profile:', e);
-                }
-            } else {
+            if (!user) {
                 revoke();
             }
         });
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        if (!firebaseUser) return;
+        const isGoogle = firebaseUser.providerData.some(p => p.providerId === 'google.com');
+        if (!isGoogle && !firebaseUser.emailVerified) return;
+
+        let cancelled = false;
+        (async () => {
+            const path = `users/${firebaseUser.uid}`;
+            try {
+                await firebaseUser.getIdToken();
+                if (cancelled) return;
+                const userRef = doc(db, 'users', firebaseUser.uid);
+                const snap = await getDoc(userRef);
+                if (cancelled) return;
+                const safeEmail = (firebaseUser.email || '').slice(0, 320);
+                const safeDisplayName = (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Utente').slice(0, 120) || 'Utente';
+                const nowIso = new Date().toISOString();
+
+                if (!snap.exists()) {
+                    const createdAt = firebaseUser.metadata.creationTime
+                        ? new Date(firebaseUser.metadata.creationTime).toISOString()
+                        : nowIso;
+                    await setDoc(userRef, {
+                        uid: firebaseUser.uid,
+                        email: safeEmail,
+                        displayName: safeDisplayName,
+                        lastLogin: nowIso,
+                        createdAt
+                    });
+                } else {
+                    const existingData = snap.data();
+                    if (!existingData?.createdAt) {
+                        const createdAt = firebaseUser.metadata.creationTime
+                            ? new Date(firebaseUser.metadata.creationTime).toISOString()
+                            : nowIso;
+                        await setDoc(userRef, {
+                            uid: firebaseUser.uid,
+                            email: safeEmail,
+                            displayName: safeDisplayName,
+                            lastLogin: nowIso,
+                            createdAt
+                        }, { merge: true });
+                    } else {
+                        await updateDoc(userRef, {
+                            email: safeEmail,
+                            displayName: safeDisplayName,
+                            lastLogin: nowIso
+                        });
+                    }
+                }
+            } catch (e) {
+                try {
+                    handleFirestoreError(e, OperationType.WRITE, path);
+                } catch (err) {
+                    console.error('Error saving user profile:', err);
+                }
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [firebaseUser?.uid, firebaseUser?.emailVerified]);
 
     const translateFirebaseError = (err: any) => {
         const code = err?.code || '';
@@ -182,7 +233,8 @@ export default function AuthGate() {
         setSubmitting(true);
         try {
             await firebaseUser.reload();
-            setFirebaseUser({ ...auth.currentUser! });
+            await auth.currentUser?.getIdToken(true);
+            setFirebaseUser(auth.currentUser ? { ...auth.currentUser } as User : null);
         } catch (e: any) {
             // ignore
         } finally {

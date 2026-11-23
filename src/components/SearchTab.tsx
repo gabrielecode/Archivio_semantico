@@ -1,11 +1,14 @@
 import React, {useState, useRef, useMemo, useEffect} from 'react';
 import {Search, History, Sparkles} from 'lucide-react';
-import {Archive, EMB_DIM} from '../types';
+import {Archive, EMB_DIM, Template} from '../types';
 import {fetchEmbeddings} from '../utils/api';
 import {Button, EmptyState} from './ui';
 import {buildHeader} from '../utils/chunk';
 import {useTranslation} from '../utils/i18n';
 import {SuggestionsBox} from './SuggestionsBox';
+import templatesData from '../templates.json';
+
+const templates = templatesData as Template[];
 
 function cosineSimilarity(a: number[], b: number[]): number {
     let dotProduct = 0;
@@ -85,6 +88,8 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
         'Stasi di Qi di Fegato'
     ];
 
+    const templateNameMap = useMemo(() => new Map(templates.map(tpl => [tpl.id, tpl.name])), []);
+    const allTipi = useMemo(() => Array.from(new Set(archive.records.map(r => r.tipo).filter(Boolean))), [archive.records]);
     const allTags = useMemo(() => Array.from(new Set(archive.records.flatMap(r => r.tags))), [archive]);
     const validRecords = useMemo(() => archive.records.filter(r => r.chunks.length > 0), [archive]);
     
@@ -96,12 +101,49 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
         });
     }, [validRecords, tipo, tag]);
 
+    const lexicalSearch = (q: string): {id: string, score: number, chunkText: string}[] => {
+        const normalizedQuery = normalizeText(q.trim());
+        const words = normalizedQuery.split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [];
+
+        const matches: {id: string, score: number, chunkText: string}[] = [];
+        for (const r of archive.records) {
+            if (tipo && r.tipo !== tipo) continue;
+            if (tag && !r.tags.includes(tag)) continue;
+
+            const campiValues = Object.values(r.campi || {})
+                .flatMap(v => Array.isArray(v) ? v : [v])
+                .filter(Boolean)
+                .join(' ');
+            const titleNorm = normalizeText(r.titolo || '');
+            const fullTextNorm = normalizeText(`${r.titolo || ''} ${r.contenuto || ''} ${(r.tags || []).join(' ')} ${campiValues}`);
+
+            const titleMatch = titleNorm.includes(normalizedQuery);
+            const allWordsMatch = words.every(w => fullTextNorm.includes(w));
+            if (titleMatch || allWordsMatch) {
+                matches.push({
+                    id: r.id,
+                    score: titleMatch ? 0.9 : 0.6,
+                    chunkText: r.contenuto || campiValues || r.titolo
+                });
+            }
+        }
+        return matches;
+    };
+
     const performSearch = async (q: string) => {
         if (q.trim().length < 2) return;
-        setLoading(true);
         setError(null);
         saveRecent(q);
 
+        const lexical = lexicalSearch(q);
+        if (filteredRecords.length === 0) {
+            setLoading(false);
+            setResults(lexical.sort((a, b) => b.score - a.score));
+            return;
+        }
+
+        setLoading(true);
         if (abortController.current) abortController.current.abort();
         abortController.current = new AbortController();
 
@@ -115,7 +157,11 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                 queryCache.current = {q, vec};
             }
 
-            const newResults: {id: string, score: number, chunkText: string}[] = [];
+            const merged = new Map<string, {id: string, score: number, chunkText: string}>();
+            for (const item of lexical) {
+                merged.set(item.id, item);
+            }
+
             const normalizedQuery = normalizeText(q.trim());
 
             for (const r of filteredRecords) {
@@ -136,14 +182,20 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
                     const tagsNormalized = r.tags.map(normalizeText);
                     const hasMatch = titleNormalized.includes(normalizedQuery) || tagsNormalized.some(t => t.includes(normalizedQuery));
                     const finalScore = bestChunkScore + (hasMatch ? 0.05 : 0);
-                    newResults.push({id: r.id, score: finalScore, chunkText: bestChunkText});
+                    const existing = merged.get(r.id);
+                    if (!existing || finalScore > existing.score) {
+                        merged.set(r.id, {id: r.id, score: finalScore, chunkText: bestChunkText});
+                    }
                 }
             }
 
-            newResults.sort((a, b) => b.score - a.score);
+            const newResults = Array.from(merged.values()).sort((a, b) => b.score - a.score);
             setResults(newResults);
         } catch (e: unknown) {
-            if (e instanceof Error && e.name !== 'AbortError') setError(t('connectionError'));
+            if (e instanceof Error && e.name !== 'AbortError') {
+                setResults(lexical.sort((a, b) => b.score - a.score));
+                setError('Ricerca per significato non disponibile');
+            }
         } finally {
             setLoading(false);
         }
@@ -152,7 +204,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
     const handleSearch = () => performSearch(query);
 
     useEffect(() => {
-        if (queryCache.current?.q === query && queryCache.current?.q) {
+        if (results !== null) {
             performSearch(query);
         }
     }, [tipo, tag]);
@@ -165,7 +217,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
         return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{t('possibleRelevant')}</span>;
     };
 
-    if (validRecords.length === 0) return <EmptyState icon={Search} title={t('noIndexedVoices')} text={t('noIndexedSub')} action={{label: t('goToData'), onClick: onGoData}} />;
+    if (archive.records.length === 0) return <EmptyState icon={Search} title={t('noIndexedVoices')} text={t('noIndexedSub')} action={{label: t('goToData'), onClick: onGoData}} />;
 
     return (
         <div className="space-y-6 text-text-primary text-base">
@@ -232,7 +284,7 @@ export const SearchTab = ({archive, onOpenRec, onGoData, updateArchive}: {archiv
             <div className="flex flex-wrap gap-4">
                 <select value={tipo} onChange={e => setTipo(e.target.value)} className="px-3 py-2 rounded-xl border border-border-primary text-sm bg-card-bg text-text-primary min-h-[40px]">
                     <option value="">{t('allTypes')}</option>
-                    {archive.schema.tipi.map(t => <option key={t} value={t}>{t}</option>)}
+                    {allTipi.map(tp => <option key={tp} value={tp}>{templateNameMap.get(tp) || tp}</option>)}
                 </select>
                 <select value={tag} onChange={e => setTag(e.target.value)} className="px-3 py-2 rounded-xl border border-border-primary text-sm bg-card-bg text-text-primary min-h-[40px]">
                     <option value="">{t('allTags')}</option>

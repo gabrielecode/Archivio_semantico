@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Button, EmptyState } from './ui';
 import { Shield, Users, RefreshCw, ArrowLeft, Mail, Calendar, Clock } from 'lucide-react';
 
@@ -18,8 +18,11 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setUsers(list);
         } catch (e: any) {
-            console.error('Error fetching users:', e);
-            setError(e.message || 'Errore durante il recupero degli utenti');
+            try {
+                handleFirestoreError(e, OperationType.LIST, 'users');
+            } catch (structuredErr: any) {
+                setError(e?.message || structuredErr?.message || 'Errore durante il recupero degli utenti');
+            }
         } finally {
             setLoading(false);
         }

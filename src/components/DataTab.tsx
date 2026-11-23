@@ -57,29 +57,34 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       return JSON.stringify(original) !== JSON.stringify(draft);
   }, [draft, selectedId, archive.records]);
 
+  const blankRecord = (): Rec => {
+    const tipo = archive.schema.tipi[0] || '';
+    const now = new Date().toISOString();
+    return {
+        id: crypto.randomUUID(),
+        titolo: '',
+        tipo,
+        categoria: tipo,
+        contenuto: '',
+        tags: [],
+        tag: [],
+        outlinks: [],
+        fonte: '',
+        campi: {},
+        creato: now,
+        modificato: now,
+        embHash: '',
+        chunks: []
+    };
+  };
+
   useEffect(() => {
     if (!selectedId) {
         if (archive.records.length > 0 && !draft) {
             setSelectedId(archive.records[0].id);
             return;
         }
-        const tipo = archive.schema.tipi[0] || '';
-        const newRec: Rec = {
-            id: crypto.randomUUID(),
-            titolo: '',
-            tipo,
-            categoria: tipo,
-            contenuto: '',
-            tags: [],
-            tag: [],
-            outlinks: [],
-            fonte: '',
-            campi: {},
-            creato: new Date().toISOString(),
-            modificato: new Date().toISOString(),
-            embHash: '',
-            chunks: []
-        };
+        const newRec = blankRecord();
         setDraft(newRec);
         setIsNew(true);
         setSelectedId(newRec.id);
@@ -95,7 +100,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
 
   const handleSave = () => {
-    if (!draft) return;
+    if (!draft || !draft.titolo.trim()) return;
     const now = new Date().toISOString();
     const withOutlinks = updateRecordOutlinks(draft);
     const updated = {...withOutlinks, modificato: now};
@@ -113,9 +118,11 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const handleTemplateSave = (campi: any, template: Template) => {
     if (!draft) return;
     const now = new Date().toISOString();
-    // Use the primary name field as the title if available
-    const nameFieldId = template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id;
-    const titolo = campi[nameFieldId || ''] || draft.titolo || template.name;
+    const titleFieldId =
+      template.fields.find(f => f.required && f.type === 'text')?.id ||
+      template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
+      template.fields.find(f => f.type === 'text')?.id;
+    const titolo = (titleFieldId ? String(campi[titleFieldId] ?? '').trim() : '') || draft.titolo || template.name;
     
     const updated: Rec = {
       ...draft,
@@ -220,8 +227,12 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   };
 
   const createNew = () => {
-    setSelectedId(null);
+    const newRec = blankRecord();
+    setDraft(newRec);
+    setIsNew(true);
+    setSelectedId(newRec.id);
     setEditing(true);
+    setView('Modulo');
     setTemplateId(null);
   };
 
@@ -237,9 +248,15 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         title: t('deleteRecordTitle'),
         message: t('deleteRecordMsg'),
         onConfirm: () => { 
+            const remaining = archive.records.filter(r => r.id !== selectedId);
             setArchive(a => ({...a, records: a.records.filter(r => r.id !== selectedId)}));
             setConfirmDialog(null);
-            createNew();
+            setEditing(false);
+            if (remaining.length > 0) {
+                setSelectedId(remaining[0].id);
+            } else {
+                createNew();
+            }
         },
         onCancel: () => setConfirmDialog(null)
     });
@@ -303,9 +320,11 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
                         <Button variant="ghost" onClick={handleNuovo} icon={Plus} className="hidden sm:flex">Nuova</Button>
                         <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
-                        <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
-                            {isDirty ? 'Salva Modifiche' : 'Salvato'}
-                        </Button>
+                        {!editing && (
+                          <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
+                              {isDirty ? 'Salva Modifiche' : 'Salvato'}
+                          </Button>
+                        )}
                     </div>
                 </div>
 
@@ -329,7 +348,8 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                 <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                     {editing ? (
                       <DynamicForm 
-                        initialValues={draft} 
+                        key={draft.id}
+                        initialValues={isNew ? {} : draft} 
                         templateId={templateId || undefined}
                         onSave={handleTemplateSave}
                         onCancel={() => {
