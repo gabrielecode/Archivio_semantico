@@ -318,7 +318,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             />
                         )}
 
-                        <Button variant="ghost" onClick={handleNuovo} icon={Plus} className="hidden sm:flex">Nuova</Button>
+                        <Button variant="ghost" onClick={handleNuovo} icon={Plus}>Nuova</Button>
                         <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
                         {!editing && (
                           <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">

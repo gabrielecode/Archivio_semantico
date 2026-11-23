@@ -54,7 +54,8 @@ export default function AuthGate() {
         (async () => {
             const path = `users/${firebaseUser.uid}`;
             try {
-                await firebaseUser.getIdToken();
+                if (!auth.currentUser) return;
+                await auth.currentUser?.getIdToken();
                 if (cancelled) return;
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 const snap = await getDoc(userRef);
