@@ -190,7 +190,8 @@
       { "id": "periodo_anno", "label": "Periodo dell'anno", "type": "text" },
       { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
       { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -213,7 +214,8 @@
       { "id": "pti_sida", "label": "P.ti da utilizzare sec. SIDA", "type": "list" },
       { "id": "rif_testi_classici", "label": "Riferimento testi classici", "type": "textarea" },
       { "id": "rif_libri", "label": "Riferimento libri", "type": "textarea" },
-      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" }
+      { "id": "rif_dispense", "label": "Riferimento dispense", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -229,7 +231,8 @@
       { "id": "ideogramma_secondario", "label": "Ideogramma secondario", "type": "text" },
       { "id": "significato", "label": "Significato", "type": "textarea" },
       { "id": "periodo_storico", "label": "Periodo storico", "type": "text" },
-      { "id": "sec_jy", "label": "Sec. JY", "type": "textarea" }
+      { "id": "sec_jy", "label": "Sec. JY", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -246,7 +249,8 @@
       { "id": "autore", "label": "Autore", "type": "text" },
       { "id": "periodo_storico", "label": "Periodo storico", "type": "text" },
       { "id": "dinastia", "label": "Dinastia", "type": "text" },
-      { "id": "capitolo", "label": "Capitolo", "type": "text" }
+      { "id": "capitolo", "label": "Capitolo", "type": "text" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -259,7 +263,8 @@
       { "id": "periodo_storico", "label": "Periodo storico", "type": "text" },
       { "id": "caratteristiche", "label": "Caratteristiche", "type": "textarea" },
       { "id": "filosofia", "label": "Filosofia", "type": "textarea" },
-      { "id": "influenze_storiche", "label": "Influenze storiche", "type": "textarea" }
+      { "id": "influenze_storiche", "label": "Influenze storiche", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -275,7 +280,8 @@
       { "id": "lingua", "label": "Lingua", "type": "text" },
       { "id": "dispense", "label": "Dispense", "type": "textarea" },
       { "id": "appunti", "label": "Appunti", "type": "textarea" },
-      { "id": "link", "label": "Link", "type": "link" }
+      { "id": "link", "label": "Link", "type": "link" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -288,7 +294,8 @@
       { "id": "periodo_storico", "label": "Periodo storico", "type": "text" },
       { "id": "classici_trattati", "label": "Classici / trattati scritti", "type": "textarea" },
       { "id": "scuola_pensiero", "label": "Scuola di pensiero", "type": "text" },
-      { "id": "tecnica_ricetta", "label": "Tecnica / Ricetta utilizzata", "type": "textarea" }
+      { "id": "tecnica_ricetta", "label": "Tecnica / Ricetta utilizzata", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   },
   {
@@ -298,7 +305,8 @@
     "fieldColor": "#C62828",
     "fields": [
       { "id": "fisiologia_mcc", "label": "FISIOLOGIA IN MCC", "type": "textarea" },
-      { "id": "fisiologia_mtc", "label": "FISIOLOGIA IN MTC", "type": "textarea" }
+      { "id": "fisiologia_mtc", "label": "FISIOLOGIA IN MTC", "type": "textarea" },
+      { "id": "immagine", "label": "Immagine", "type": "image" }
     ]
   }
 ]

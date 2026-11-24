@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Rec, Template } from '../types';
-import { ExternalLink, Video, List, FileText } from 'lucide-react';
+import { ExternalLink, Video, X } from 'lucide-react';
 import { PronunciationButton } from './PronunciationButton';
 import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
 
 export const CardPreview = ({ record }: { record: Rec }) => {
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const template = templates.find(t => t.id === record.tipo) || templates[0];
   const fields = template.fields;
+
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxUrl(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxUrl]);
 
   const audioTarget = record.campi['ideogramma'] || record.campi['nome_principale'] || record.titolo;
 
@@ -79,15 +89,28 @@ export const CardPreview = ({ record }: { record: Rec }) => {
                     ))}
                   </ul>
                 )}
-                {f.type === 'image' && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {val.map((url: string, i: number) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden border border-stone-100 block">
-                        <img src={url} alt={f.label} className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {f.type === 'image' && (() => {
+                  const imgs = Array.isArray(val)
+                    ? val.filter((u: any) => typeof u === 'string' && u.trim() !== '')
+                    : typeof val === 'string' && val.trim() !== ''
+                      ? [val]
+                      : [];
+                  if (imgs.length === 0) return null;
+                  return (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {imgs.map((url: string, i: number) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          className="aspect-square rounded-lg overflow-hidden border border-stone-200 block bg-stone-50 hover:opacity-90 transition-opacity cursor-zoom-in"
+                        >
+                          <img src={url} alt={f.label} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 {f.type === 'video' && (
                   <a href={val} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline text-sm font-medium p-2 bg-blue-50 rounded-lg">
                     <Video size={16} /> Guarda video
@@ -118,6 +141,27 @@ export const CardPreview = ({ record }: { record: Rec }) => {
         <span>ID: {record.id.slice(0, 8)}</span>
         <span>MODIFICATO: {new Date(record.modificato).toLocaleDateString()}</span>
       </div>
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightboxUrl(null)}
+              className="absolute -top-10 right-0 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              aria-label="Chiudi immagine"
+            >
+              <X size={20} />
+            </button>
+            <img src={lightboxUrl} alt="Anteprima foto" className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl bg-white" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
