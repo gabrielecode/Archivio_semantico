@@ -64,25 +64,50 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
 
     // Build graph data
     const graphData = useMemo(() => {
-        const titleToId = new Map<string, string>();
-        archive.records.forEach(r => titleToId.set(r.titolo.trim().toLowerCase(), r.id));
+        const normalizeText = (s: string) =>
+            s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+        const extractFieldTexts = (val: unknown): string[] => {
+            if (typeof val === 'string') return [val];
+            if (typeof val === 'number') return [String(val)];
+            if (Array.isArray(val)) return val.flatMap(extractFieldTexts);
+            if (val && typeof val === 'object') return Object.values(val).flatMap(extractFieldTexts);
+            return [];
+        };
 
         const degreeMap = new Map<string, number>();
         archive.records.forEach(r => {
             degreeMap.set(r.id, 0);
         });
 
-        const links: { source: string; target: string; tipoRelazione: string; isGhost?: boolean }[] = [];
+        const links: { source: string; target: string; tipoRelazione: string; isGhost?: boolean; dashed?: boolean }[] = [];
         const ghostNodesMap = new Map<string, { title: string; count: number }>();
+        const edgeSet = new Set<string>();
+        const getPairKey = (a: string, b: string) => (a < b ? `${a}\0${b}` : `${b}\0${a}`);
+
+        const addLink = (source: string, target: string, tipoRelazione: string, opts?: { isGhost?: boolean; dashed?: boolean }) => {
+            if (source === target) return false;
+            const key = getPairKey(source, target);
+            if (edgeSet.has(key)) return false;
+            edgeSet.add(key);
+            links.push({
+                source,
+                target,
+                tipoRelazione,
+                ...(opts?.isGhost ? { isGhost: true } : {}),
+                ...(opts?.dashed ? { dashed: true } : {})
+            });
+            degreeMap.set(source, (degreeMap.get(source) || 0) + 1);
+            degreeMap.set(target, (degreeMap.get(target) || 0) + 1);
+            return true;
+        };
 
         archive.records.forEach(sourceRec => {
             const wikiLinks = extractWikiLinks(sourceRec.contenuto);
-            const processedTargets = new Set<string>();
 
             wikiLinks.forEach(wl => {
                 const targetRec = findRecordByTitle(archive, wl.targetTitle);
-                if (targetRec && targetRec.id !== sourceRec.id && !processedTargets.has(targetRec.id)) {
-                    processedTargets.add(targetRec.id);
+                if (targetRec && targetRec.id !== sourceRec.id) {
                     let tipo = wl.tipoRelazione;
                     if (!tipo) {
                         const srcCat = (sourceRec.categoria || sourceRec.tipo || '').toLowerCase();
@@ -95,33 +120,19 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                             tipo = 'correlato_a';
                         }
                     }
-                    links.push({
-                        source: sourceRec.id,
-                        target: targetRec.id,
-                        tipoRelazione: tipo
-                    });
-                    degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
-                    degreeMap.set(targetRec.id, (degreeMap.get(targetRec.id) || 0) + 1);
+                    addLink(sourceRec.id, targetRec.id, tipo);
                 } else if (!targetRec) {
                     const cleanTitle = wl.targetTitle.trim();
                     if (cleanTitle && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
                         const ghostKey = cleanTitle.toLowerCase();
                         const ghostId = `ghost-${ghostKey}`;
-                        if (!processedTargets.has(ghostId)) {
-                            processedTargets.add(ghostId);
+                        if (!edgeSet.has(getPairKey(sourceRec.id, ghostId))) {
                             if (!ghostNodesMap.has(ghostKey)) {
                                 ghostNodesMap.set(ghostKey, { title: cleanTitle, count: 0 });
                                 degreeMap.set(ghostId, 0);
                             }
                             ghostNodesMap.get(ghostKey)!.count++;
-                            links.push({
-                                source: sourceRec.id,
-                                target: ghostId,
-                                tipoRelazione: wl.tipoRelazione || 'correlato_a',
-                                isGhost: true
-                            });
-                            degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
-                            degreeMap.set(ghostId, (degreeMap.get(ghostId) || 0) + 1);
+                            addLink(sourceRec.id, ghostId, wl.tipoRelazione || 'correlato_a', { isGhost: true });
                         }
                     }
                 }
@@ -130,8 +141,7 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
             const outlinks = sourceRec.outlinks || [];
             outlinks.forEach(targetTitle => {
                 const targetRec = findRecordByTitle(archive, targetTitle);
-                if (targetRec && targetRec.id !== sourceRec.id && !processedTargets.has(targetRec.id)) {
-                    processedTargets.add(targetRec.id);
+                if (targetRec && targetRec.id !== sourceRec.id) {
                     let tipo = 'correlato_a';
                     const srcCat = (sourceRec.categoria || sourceRec.tipo || '').toLowerCase();
                     const tgtCat = (targetRec.categoria || targetRec.tipo || '').toLowerCase();
@@ -140,37 +150,85 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                     } else if (srcCat.includes('erba') || srcCat.includes('formula')) {
                         tipo = 'tratta';
                     }
-                    links.push({
-                        source: sourceRec.id,
-                        target: targetRec.id,
-                        tipoRelazione: tipo
-                    });
-                    degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
-                    degreeMap.set(targetRec.id, (degreeMap.get(targetRec.id) || 0) + 1);
+                    addLink(sourceRec.id, targetRec.id, tipo);
                 } else if (!targetRec) {
                     const cleanTitle = targetTitle.trim();
                     if (cleanTitle && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
                         const ghostKey = cleanTitle.toLowerCase();
                         const ghostId = `ghost-${ghostKey}`;
-                        if (!processedTargets.has(ghostId)) {
-                            processedTargets.add(ghostId);
+                        if (!edgeSet.has(getPairKey(sourceRec.id, ghostId))) {
                             if (!ghostNodesMap.has(ghostKey)) {
                                 ghostNodesMap.set(ghostKey, { title: cleanTitle, count: 0 });
                                 degreeMap.set(ghostId, 0);
                             }
                             ghostNodesMap.get(ghostKey)!.count++;
-                            links.push({
-                                source: sourceRec.id,
-                                target: ghostId,
-                                tipoRelazione: 'correlato_a',
-                                isGhost: true
-                            });
-                            degreeMap.set(sourceRec.id, (degreeMap.get(sourceRec.id) || 0) + 1);
-                            degreeMap.set(ghostId, (degreeMap.get(ghostId) || 0) + 1);
+                            addLink(sourceRec.id, ghostId, 'correlato_a', { isGhost: true });
                         }
                     }
                 }
             });
+        });
+
+        // (a) Title mentions in campi values (normalized, title length >= 4)
+        const normalizedTargets = archive.records
+            .map(r => ({ id: r.id, normTitle: normalizeText(r.titolo || '') }))
+            .filter(item => item.normTitle.length >= 4);
+
+        archive.records.forEach(sourceRec => {
+            const fieldTexts = extractFieldTexts(Object.values(sourceRec.campi || {}))
+                .map(normalizeText)
+                .filter(Boolean);
+            if (fieldTexts.length === 0) return;
+
+            normalizedTargets.forEach(({ id: targetId, normTitle }) => {
+                if (targetId !== sourceRec.id && fieldTexts.some(txt => txt.includes(normTitle))) {
+                    addLink(sourceRec.id, targetId, 'correlato_a', { dashed: true });
+                }
+            });
+        });
+
+        // (b) Same normalized value in autore, dinastia, or periodo_storico
+        (['autore', 'dinastia', 'periodo_storico'] as const).forEach(field => {
+            const groups = new Map<string, string[]>();
+            archive.records.forEach(rec => {
+                const rawVal = rec.campi?.[field];
+                if (rawVal === undefined || rawVal === null) return;
+                const uniqueVals = new Set(
+                    extractFieldTexts(rawVal).map(normalizeText).filter(Boolean)
+                );
+                uniqueVals.forEach(val => {
+                    if (!groups.has(val)) groups.set(val, []);
+                    groups.get(val)!.push(rec.id);
+                });
+            });
+            groups.forEach(ids => {
+                for (let i = 0; i < ids.length; i++) {
+                    for (let j = i + 1; j < ids.length; j++) {
+                        addLink(ids[i], ids[j], 'correlato_a', { dashed: true });
+                    }
+                }
+            });
+        });
+
+        // (c) At least one shared tag
+        const tagGroups = new Map<string, string[]>();
+        archive.records.forEach(rec => {
+            const uniqueTags = new Set(
+                [...(rec.tags || []), ...(rec.tag || [])]
+                    .map(t => normalizeText(String(t)))
+                    .filter(Boolean)
+            );
+            uniqueTags.forEach(tag => {
+                if (!tagGroups.has(tag)) tagGroups.set(tag, []);
+                tagGroups.get(tag)!.push(rec.id);
+            });
+        });
+        tagGroups.forEach(ids => {
+            for (let i = 0; i < ids.length; i++) {
+                for (let j = i + 1; j < ids.length; j++) {
+                    addLink(ids[i], ids[j], 'correlato_a', { dashed: true });
+                }
+            }
         });
 
         const nodes = archive.records.map(r => {
@@ -340,7 +398,7 @@ export function GraphTab({archive, onOpenRec}: GraphTabProps) {
                         ctx.lineTo(end.x, end.y);
                         ctx.strokeStyle = link.isGhost ? '#cbd5e1' : getColorForRelation(link.tipoRelazione);
                         ctx.lineWidth = link.isGhost ? 1.5 : 2;
-                        if (link.isGhost) {
+                        if (link.isGhost || link.dashed) {
                             ctx.setLineDash([4, 4]);
                         } else {
                             ctx.setLineDash([]);

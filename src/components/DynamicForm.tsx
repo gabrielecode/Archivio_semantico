@@ -29,16 +29,35 @@ interface DynamicFormProps {
   initialValues?: any;
   templateId?: string;
   onSave: (values: any, template: Template) => void;
+  onAutosave?: (values: any, template: Template) => boolean | void;
   onCancel: () => void;
   onDirty?: (d: boolean) => void;
 }
 
-export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel, onDirty }: DynamicFormProps) => {
+export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave, onCancel, onDirty }: DynamicFormProps) => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     templates.find(t => t.id === (templateId || initialValues.templateId)) || null
   );
   const [values, setValues] = useState<any>(initialValues.campi || {});
+  const [autosaveTime, setAutosaveTime] = useState<string | null>(null);
   const dirtyRef = useRef(false);
+  const valuesRef = useRef<any>(values);
+  valuesRef.current = values;
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onAutosaveRef = useRef(onAutosave);
+  onAutosaveRef.current = onAutosave;
+  const isEditing = Boolean(initialValues?.id || Object.keys(initialValues || {}).length > 0);
+
+  const clearAutosaveTimer = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearAutosaveTimer();
+  }, []);
 
   useEffect(() => {
     if (templateId) {
@@ -47,17 +66,48 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel, 
     }
   }, [templateId]);
 
+  const getDerivedTitle = (vals: any, template: Template) => {
+    const titleFieldId =
+      template.fields.find(f => f.required && f.type === 'text')?.id ||
+      template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
+      template.fields.find(f => f.type === 'text')?.id;
+    return titleFieldId ? String(vals[titleFieldId] ?? '').trim() : String(initialValues?.titolo ?? '').trim();
+  };
+
   const handleFieldChange = (id: string, val: any) => {
-    setValues((prev: any) => ({ ...prev, [id]: val }));
+    const nextValues = { ...valuesRef.current, [id]: val };
+    valuesRef.current = nextValues;
+    setValues(nextValues);
     if (!dirtyRef.current) {
       dirtyRef.current = true;
       onDirty?.(true);
+    }
+
+    clearAutosaveTimer();
+    if (selectedTemplate && onAutosaveRef.current) {
+      const derivedTitle = getDerivedTitle(nextValues, selectedTemplate);
+      if (derivedTitle) {
+        const tmpl = selectedTemplate;
+        autosaveTimerRef.current = setTimeout(() => {
+          autosaveTimerRef.current = null;
+          const res = onAutosaveRef.current?.(nextValues, tmpl);
+          if (res !== false) {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            setAutosaveTime(`${hh}:${mm}`);
+            dirtyRef.current = false;
+            onDirty?.(false);
+          }
+        }, 1500);
+      }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTemplate) return;
+    clearAutosaveTimer();
     onSave(values, selectedTemplate);
   };
 
@@ -130,6 +180,11 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel, 
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {autosaveTime && (
+                  <span className="text-xs font-medium text-stone-500">
+                    Salvato automaticamente {autosaveTime}
+                  </span>
+                )}
                 {values['nome_principale'] && (
                   <PronunciationButton
                     text={values['nome_principale']}
@@ -140,8 +195,8 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onCancel, 
                     showSpeedToggle={true}
                   />
                 )}
-                {!templateId && (
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>Cambia Tipo</Button>
+                {!templateId && !isEditing && (
+                  <Button variant="ghost" size="sm" onClick={() => { clearAutosaveTimer(); setSelectedTemplate(null); }}>Cambia Tipo</Button>
                 )}
               </div>
             </div>

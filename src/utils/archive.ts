@@ -189,3 +189,54 @@ export function templateExcel(archive: Archive) {
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
     XLSX.writeFile(wb, `Template.xlsx`);
 }
+
+const normClean = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+function hasCampiValues(campi?: Record<string, any>): boolean {
+    if (!campi || typeof campi !== 'object') return false;
+    return Object.values(campi).some(v => {
+        if (v === null || v === undefined) return false;
+        if (Array.isArray(v)) return v.some(item => String(item ?? '').trim() !== '');
+        return String(v).trim() !== '';
+    });
+}
+
+function recordTimestamp(r: Rec): number {
+    const mod = Date.parse(r.modificato || '');
+    if (!Number.isNaN(mod)) return mod;
+    const cre = Date.parse(r.creato || '');
+    return !Number.isNaN(cre) ? cre : 0;
+}
+
+export function cleanArchive(a: Archive): Archive {
+    const nonEmpty = a.records.filter(r => {
+        const hasTitle = (r.titolo || '').trim() !== '';
+        const hasContent = (r.contenuto || '').trim() !== '';
+        const hasCampi = hasCampiValues(r.campi);
+        return hasTitle || hasContent || hasCampi;
+    });
+
+    const latestByKey = new Map<string, Rec>();
+    for (const r of nonEmpty) {
+        const nTitle = normClean(r.titolo || '');
+        if (!nTitle) continue;
+        const key = `${nTitle}\0${normClean(r.tipo || '')}`;
+        const existing = latestByKey.get(key);
+        if (!existing || recordTimestamp(r) >= recordTimestamp(existing)) {
+            latestByKey.set(key, r);
+        }
+    }
+
+    const records = nonEmpty.filter(r => {
+        const nTitle = normClean(r.titolo || '');
+        if (!nTitle) return true;
+        const key = `${nTitle}\0${normClean(r.tipo || '')}`;
+        return latestByKey.get(key) === r;
+    });
+
+    return {
+        ...a,
+        records
+    };
+}
+

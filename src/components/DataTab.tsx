@@ -1,9 +1,10 @@
-import {useState, useMemo, useEffect, useCallback} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import {Archive, Rec} from '../types';
 import {Button, Badge, Field, inputCls, EmptyState} from './ui';
-import {ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight} from 'lucide-react';
+import {ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight, Pencil} from 'lucide-react';
 import {useTranslation} from '../utils/i18n';
 import {updateRecordOutlinks} from '../utils/parser';
+import {cleanArchive} from '../utils/archive';
 import {WikiContent} from './WikiContent';
 import {LinkPanel} from './LinkPanel';
 import {DynamicForm} from './DynamicForm';
@@ -119,6 +120,31 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     window.scrollTo({top:0});
   };
 
+  const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+  const findDuplicate = (titolo: string, tipo: string, excludeId?: string) => {
+    const nTitle = norm(titolo);
+    const nTipo = norm(tipo);
+    return archive.records.find(
+      r => r.id !== excludeId && norm(r.titolo || '') === nTitle && norm(r.tipo || '') === nTipo
+    );
+  };
+
+  const showDuplicateDialog = (existing: Rec) => {
+    setConfirmDialog({
+      title: 'Scheda già esistente',
+      message: 'Esiste già una scheda con questo nome. Vuoi aprirla?',
+      confirmLabel: 'Apri',
+      onConfirm: () => {
+        setSelectedId(existing.id);
+        setEditing(false);
+        setFormDirty(false);
+        setConfirmDialog(null);
+      },
+      onCancel: () => setConfirmDialog(null)
+    });
+  };
+
   const handleTemplateSave = (campi: any, template: Template) => {
     if (!draft) return;
     const now = new Date().toISOString();
@@ -128,24 +154,10 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       template.fields.find(f => f.type === 'text')?.id;
     const titolo = (titleFieldId ? String(campi[titleFieldId] ?? '').trim() : '') || draft.titolo || template.name;
 
-    if (isNew) {
-      const existing = archive.records.find(
-        r => r.titolo.trim().toLowerCase() === titolo.trim().toLowerCase() && r.tipo === template.id
-      );
-      if (existing) {
-        setConfirmDialog({
-          title: 'Scheda già esistente',
-          message: 'Esiste già una scheda con questo nome. Vuoi aprirla?',
-          onConfirm: () => {
-            setSelectedId(existing.id);
-            setEditing(false);
-            setFormDirty(false);
-            setConfirmDialog(null);
-          },
-          onCancel: () => setConfirmDialog(null)
-        });
-        return;
-      }
+    const existing = findDuplicate(titolo, template.id, draft.id);
+    if (existing) {
+      showDuplicateDialog(existing);
+      return;
     }
     
     const updated: Rec = {
@@ -158,11 +170,15 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     };
 
     const withOutlinks = updateRecordOutlinks(updated);
-    if (isNew) {
-      setArchive(a => ({...a, records: [...a.records, withOutlinks]}));
-    } else {
-      setArchive(a => ({...a, records: a.records.map(r => r.id === updated.id ? withOutlinks : r)}));
-    }
+    setArchive(a => {
+      const exists = a.records.some(r => r.id === withOutlinks.id);
+      return {
+        ...a,
+        records: exists
+          ? a.records.map(r => r.id === updated.id ? withOutlinks : r)
+          : [...a.records, withOutlinks]
+      };
+    });
     
     setDraft(withOutlinks);
     setIsNew(false);
@@ -173,12 +189,61 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     window.scrollTo({top:0});
   };
 
+  const handleTemplateAutosave = (campi: any, template: Template): boolean => {
+    if (!draft) return false;
+    const now = new Date().toISOString();
+    const titleFieldId =
+      template.fields.find(f => f.required && f.type === 'text')?.id ||
+      template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
+      template.fields.find(f => f.type === 'text')?.id;
+    const titolo = titleFieldId ? String(campi[titleFieldId] ?? '').trim() : String(draft.titolo ?? '').trim();
+    if (!titolo) return false;
+
+    const existing = findDuplicate(titolo, template.id, draft.id);
+    if (existing) {
+      return false;
+    }
+
+    const updated: Rec = {
+      ...draft,
+      titolo,
+      tipo: template.id,
+      categoria: template.name,
+      campi,
+      modificato: now
+    };
+
+    const withOutlinks = updateRecordOutlinks(updated);
+    setArchive(a => {
+      const exists = a.records.some(r => r.id === withOutlinks.id);
+      return {
+        ...a,
+        records: exists
+          ? a.records.map(r => r.id === withOutlinks.id ? withOutlinks : r)
+          : [...a.records, withOutlinks]
+      };
+    });
+
+    setDraft(withOutlinks);
+    setIsNew(false);
+    setFormDirty(false);
+    setDirty(true);
+    return true;
+  };
+
   const handleCreateRecordFromWiki = (title: string) => {
+    const tipo = archive.schema.tipi[0] || 'Sintomo';
+    const newId = crypto.randomUUID();
+    const existing = findDuplicate(title, tipo, newId);
+    if (existing) {
+      showDuplicateDialog(existing);
+      return;
+    }
     const newRec: Rec = {
-        id: crypto.randomUUID(),
+        id: newId,
         titolo: title,
-        tipo: archive.schema.tipi[0] || 'Sintomo',
-        categoria: archive.schema.tipi[0] || 'Sintomo',
+        tipo,
+        categoria: tipo,
         contenuto: `Creato automaticamente tramite link da [[${draft?.titolo || ''}]].\n\n`,
         tags: [],
         tag: [],
@@ -266,27 +331,88 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
 
   const handleDuplicate = () => {
     if (!draft) return;
-    const newRec: Rec = {...draft, id: crypto.randomUUID(), titolo: `${draft.titolo} (${lang === 'de' ? 'Kopie' : 'copia'})`, creato: new Date().toISOString(), modificato: new Date().toISOString()};
+    const newTitle = `${draft.titolo} (${lang === 'de' ? 'Kopie' : 'copia'})`;
+    const newId = crypto.randomUUID();
+    const existing = findDuplicate(newTitle, draft.tipo, newId);
+    if (existing) {
+      showDuplicateDialog(existing);
+      return;
+    }
+    const newRec: Rec = {...draft, id: newId, titolo: newTitle, creato: new Date().toISOString(), modificato: new Date().toISOString()};
     setArchive(a => ({...a, records: [...a.records, newRec]}));
     setSelectedId(newRec.id);
   };
 
-  const handleDelete = () => {
+  const handleDelete = (targetId?: string) => {
+    const idToDelete = targetId ?? selectedId;
+    if (!idToDelete) return;
     setConfirmDialog({
         title: t('deleteRecordTitle'),
         message: 'Eliminare questa scheda? Non si può annullare.',
         onConfirm: () => { 
-            const remaining = archive.records.filter(r => r.id !== selectedId);
-            setArchive(a => ({...a, records: a.records.filter(r => r.id !== selectedId)}));
+            const remaining = archive.records.filter(r => r.id !== idToDelete);
+            setArchive(a => {
+                const deleted = a.records.find(r => r.id === idToDelete);
+                const deletedTitle = (deleted?.titolo || '').trim().toLowerCase();
+                return {
+                    ...a,
+                    records: a.records
+                        .filter(r => r.id !== idToDelete)
+                        .map(r => {
+                            if (!deletedTitle || !r.outlinks?.some(o => o.trim().toLowerCase() === deletedTitle)) {
+                                return r;
+                            }
+                            return {
+                                ...r,
+                                outlinks: r.outlinks.filter(o => o.trim().toLowerCase() !== deletedTitle)
+                            };
+                        })
+                };
+            });
+            setDirty(true);
             setConfirmDialog(null);
-            setEditing(false);
-            if (remaining.length > 0) {
-                setSelectedId(remaining[0].id);
-            } else {
-                createNew();
+            if (idToDelete === selectedId) {
+                setEditing(false);
+                if (remaining.length > 0) {
+                    setSelectedId(remaining[0].id);
+                } else {
+                    createNew();
+                }
             }
         },
         onCancel: () => setConfirmDialog(null)
+    });
+  };
+
+  const handleCleanDuplicates = () => {
+    const preview = cleanArchive(archive);
+    const removedCount = archive.records.length - preview.records.length;
+    if (removedCount === 0) {
+      onToast?.('Nessuna scheda doppia o vuota da rimuovere');
+      return;
+    }
+    setConfirmDialog({
+      title: 'Pulisci doppioni',
+      message: `Verranno rimosse ${removedCount} ${removedCount === 1 ? 'scheda' : 'schede'} (doppie o vuote). Continuare?`,
+      confirmLabel: 'Pulisci',
+      danger: true,
+      onConfirm: () => {
+        const cleaned = cleanArchive(archive);
+        const actualRemoved = archive.records.length - cleaned.records.length;
+        setArchive(() => cleaned);
+        setDirty(true);
+        if (selectedId && !cleaned.records.some(r => r.id === selectedId)) {
+          if (cleaned.records.length > 0) {
+            setSelectedId(cleaned.records[0].id);
+          } else {
+            setDraft(null);
+            setSelectedId(null);
+          }
+        }
+        setConfirmDialog(null);
+        onToast?.(`Rimosse ${actualRemoved} ${actualRemoved === 1 ? 'scheda' : 'schede'}`);
+      },
+      onCancel: () => setConfirmDialog(null)
     });
   };
 
@@ -346,8 +472,9 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             />
                         )}
 
+                        {!editing && <Button variant="secondary" size="sm" onClick={handleCleanDuplicates} title="Rimuovi schede doppie o vuote">Pulisci doppioni</Button>}
                         {!editing && <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">+ Nuova scheda</Button>}
-                        <Button variant="ghost" onClick={handleDelete} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 p-2 rounded-xl" />
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete()} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 px-3 py-2 rounded-xl">Elimina</Button>
                         {!editing && (
                           <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
                               {isDirty ? 'Salva Modifiche' : 'Salvato'}
@@ -365,8 +492,9 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                       <DynamicForm 
                         key={draft.id}
                         initialValues={isNew ? {} : draft} 
-                        templateId={templateId || undefined}
+                        templateId={(isNew ? templateId : templates.some(t => t.id === draft.tipo) ? draft.tipo : undefined) || undefined}
                         onSave={handleTemplateSave}
+                        onAutosave={handleTemplateAutosave}
                         onDirty={setFormDirty}
                         onCancel={() => {
                           const closeForm = () => {
@@ -394,7 +522,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                         <CardPreview record={draft} />
                         <div className="flex justify-center">
                           <Button variant="outline" size="lg" onClick={() => { setFormDirty(false); setEditing(true); }} className="w-full sm:w-auto px-12 rounded-2xl">
-                            Modifica Campi Scheda
+                            Modifica scheda
                           </Button>
                         </div>
                       </div>
@@ -434,7 +562,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                 )}
             </div>
         ) : (
-            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-x-hidden max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-x-auto max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-bg-alt/80 text-text-muted text-[11px] font-bold uppercase tracking-widest border-b border-border-primary">
@@ -442,6 +570,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                             <th className="px-6 py-5 cursor-pointer hover:text-stone-900 transition-colors" onClick={() => {setSortField('tipo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('typeLabel')}</th>
                             <th className="px-6 py-5">{t('tagsLabel')}</th>
                             <th className="px-8 py-5 cursor-pointer hover:text-stone-900 transition-colors text-right" onClick={() => {setSortField('modificato'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{lang === 'de' ? 'Geändert' : 'Modificato'}</th>
+                            <th className="px-6 py-5 text-right">Azioni</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-bg-alt/50">
@@ -463,6 +592,39 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
                                 </td>
                                 <td className="px-8 py-4 text-right">
                                     <span className="text-stone-400 font-mono text-xs">{new Date(r.modificato).toLocaleDateString(lang === 'de' ? 'de-DE' : 'it-IT')}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <div className="inline-flex items-center justify-end gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={Pencil}
+                                            onClick={(e: React.MouseEvent) => {
+                                                e.stopPropagation();
+                                                setSelectedId(r.id);
+                                                setDraft({...r});
+                                                setIsNew(false);
+                                                setFormDirty(false);
+                                                setEditing(true);
+                                                setView('Modulo');
+                                            }}
+                                            className="text-text-primary hover:bg-bg-alt px-3 py-1.5 rounded-xl"
+                                        >
+                                            Modifica
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={Trash2}
+                                            onClick={(e: React.MouseEvent) => {
+                                                e.stopPropagation();
+                                                handleDelete(r.id);
+                                            }}
+                                            className="text-red-600 hover:bg-red-50 hover:text-red-700 px-3 py-1.5 rounded-xl"
+                                        >
+                                            Elimina
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

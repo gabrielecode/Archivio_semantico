@@ -1,8 +1,8 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Archive, Rec} from '../types';
 import {extractWikiLinks, findRecordByTitle, getBacklinks} from '../utils/parser';
 import {Lightbulb, Plus, FileText, ArrowRight} from 'lucide-react';
-import {Button} from './ui';
+import {Button, ConfirmDialog} from './ui';
 
 interface SuggestionsBoxProps {
     archive: Archive;
@@ -12,6 +12,8 @@ interface SuggestionsBoxProps {
 }
 
 export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: SuggestionsBoxProps) {
+    const [duplicateRec, setDuplicateRec] = useState<Rec | null>(null);
+
     // 1. Ghost nodes (missing concepts) most linked
     const topGhostNodes = useMemo(() => {
         const ghostMap = new Map<string, { title: string; count: number; sources: Set<string> }>();
@@ -66,8 +68,17 @@ export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: Suggestio
 
     const handleCreateGhostRecord = (title: string) => {
         const defaultType = archive.schema.tipi[0] || 'Nota';
+        const newId = 'rec_' + crypto.randomUUID().slice(0, 8);
+        const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        const existing = archive.records.find(
+            r => r.id !== newId && norm(r.titolo || '') === norm(title) && norm(r.tipo || '') === norm(defaultType)
+        );
+        if (existing) {
+            setDuplicateRec(existing);
+            return;
+        }
         const newRec: Rec = {
-            id: 'rec_' + crypto.randomUUID().slice(0, 8),
+            id: newId,
             titolo: title,
             tipo: defaultType,
             categoria: defaultType,
@@ -89,11 +100,12 @@ export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: Suggestio
         onOpenRec(newRec.id);
     };
 
-    if (topGhostNodes.length === 0 && topShortRecords.length === 0) {
+    if (topGhostNodes.length === 0 && topShortRecords.length === 0 && !duplicateRec) {
         return null;
     }
 
     return (
+        <>
         <div className="bg-white border border-emerald-200 rounded-3xl p-6 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-b border-emerald-100 pb-4">
                 <div className="p-2 bg-emerald-100 text-emerald-800 rounded-2xl">
@@ -167,5 +179,19 @@ export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: Suggestio
                 </div>
             </div>
         </div>
+        {duplicateRec && (
+            <ConfirmDialog
+                title="Scheda già esistente"
+                message="Esiste già una scheda con questo nome. Vuoi aprirla?"
+                confirmLabel="Apri"
+                onConfirm={() => {
+                    const id = duplicateRec.id;
+                    setDuplicateRec(null);
+                    onOpenRec(id);
+                }}
+                onCancel={() => setDuplicateRec(null)}
+            />
+        )}
+        </>
     );
 }
