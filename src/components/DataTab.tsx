@@ -1,33 +1,41 @@
-import React, {useState, useMemo, useEffect, useCallback} from 'react';
-import {Archive, Rec} from '../types';
-import {Button, Badge, Field, inputCls, EmptyState} from './ui';
-import {ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight, Pencil} from 'lucide-react';
-import {useTranslation} from '../utils/i18n';
-import {updateRecordOutlinks} from '../utils/parser';
-import {cleanArchive} from '../utils/archive';
-import {WikiContent} from './WikiContent';
-import {LinkPanel} from './LinkPanel';
-import {DynamicForm} from './DynamicForm';
-import {CardPreview} from './CardPreview';
-import {PronunciationButton} from './PronunciationButton';
-import {Template} from '../types';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { Archive, Rec, Template } from '../types';
+import { Button, EmptyState } from './ui';
+import { ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../utils/i18n';
+import { updateRecordOutlinks } from '../utils/parser';
+import { cleanArchive } from '../utils/archive';
+import { WikiContent } from './WikiContent';
+import { LinkPanel } from './LinkPanel';
+import { DynamicForm } from './DynamicForm';
+import { CardPreview } from './CardPreview';
+import { PronunciationButton } from './PronunciationButton';
+import { DataTableView } from './DataTableView';
 import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
 
-export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedId, setSelectedId, setConfirmDialog, onToast}: {
-  archive: Archive, 
-  setArchive: (a: Archive | ((a: Archive) => Archive)) => void, 
-  setDirty: (d: boolean) => void, 
-  onGoStructure: () => void,
-  selectedId: string | null,
-  setSelectedId: (id: string | null) => void,
-  setConfirmDialog: (dialog: any) => void,
-  onToast?: (m: string) => void
+export function DataTab({
+  archive,
+  setArchive,
+  setDirty,
+  selectedId,
+  setSelectedId,
+  setConfirmDialog,
+  onToast,
+}: {
+  archive: Archive;
+  setArchive: (a: Archive | ((a: Archive) => Archive)) => void;
+  setDirty: (d: boolean) => void;
+  onGoStructure?: () => void;
+  selectedId: string | null;
+  setSelectedId: (id: string | null) => void;
+  setConfirmDialog: (dialog: any) => void;
+  onToast?: (m: string) => void;
 }) {
-  const {t, lang} = useTranslation();
+  const { t, lang } = useTranslation();
   const [view, setView] = useState<'Modulo' | 'Tabella'>('Modulo');
-  const searchTerm = '';
+  const [searchTerm] = useState('');
   const [draft, setDraft] = useState<Rec | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [sortField, setSortField] = useState<keyof Rec>('modificato');
@@ -35,90 +43,99 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
   const [editing, setEditing] = useState(false);
   const [formDirty, setFormDirty] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const lastLoadedIdRef = useRef<string | null>(null);
 
   const filteredRecords = useMemo(() => {
-    let recs = [...archive.records].filter(r => 
+    const recs = [...archive.records].filter(
+      (r) =>
         r.titolo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.contenuto.toLowerCase().includes(searchTerm.toLowerCase())
     );
     recs.sort((a, b) => {
-        const valA = a[sortField];
-        const valB = b[sortField];
-        if (valA < valB) return sortDir === 'asc' ? -1 : 1;
-        if (valA > valB) return sortDir === 'asc' ? 1 : -1;
-        return 0;
+      const valA = String(a[sortField] ?? '').toLowerCase();
+      const valB = String(b[sortField] ?? '').toLowerCase();
+      const cmp = valA.localeCompare(valB, lang === 'de' ? 'de' : 'it');
+      return sortDir === 'asc' ? cmp : -cmp;
     });
     return recs;
-  }, [archive.records, searchTerm, sortField, sortDir]);
+  }, [archive.records, searchTerm, sortField, sortDir, lang]);
 
-  const currentIndex = useMemo(() => filteredRecords.findIndex(r => r.id === selectedId), [filteredRecords, selectedId]);
+  const currentIndex = useMemo(
+    () => filteredRecords.findIndex((r) => r.id === selectedId),
+    [filteredRecords, selectedId]
+  );
 
   const isDirty = useMemo(() => {
-      if (!draft || !selectedId) return false;
-      const original = archive.records.find(r => r.id === selectedId);
-      if (!original) return true;
-      return JSON.stringify(original) !== JSON.stringify(draft);
-  }, [draft, selectedId, archive.records]);
+    if (!draft || !selectedId) return false;
+    const original = archive.records.find((r) => r.id === selectedId);
+    if (!original) return isNew;
+    return JSON.stringify(original) !== JSON.stringify(draft);
+  }, [draft, selectedId, archive.records, isNew]);
 
-  const blankRecord = (): Rec => {
+  const blankRecord = useCallback((): Rec => {
     const tipo = archive.schema.tipi[0] || '';
     const now = new Date().toISOString();
     return {
-        id: crypto.randomUUID(),
-        titolo: '',
-        tipo,
-        categoria: tipo,
-        contenuto: '',
-        tags: [],
-        tag: [],
-        outlinks: [],
-        fonte: '',
-        campi: {},
-        creato: now,
-        modificato: now,
-        embHash: '',
-        chunks: []
+      id: crypto.randomUUID(),
+      titolo: '',
+      tipo,
+      categoria: tipo,
+      contenuto: '',
+      tags: [],
+      tag: [],
+      outlinks: [],
+      fonte: '',
+      campi: {},
+      images: [],
+      creato: now,
+      modificato: now,
+      embHash: '',
+      chunks: [],
     };
-  };
+  }, [archive.schema.tipi]);
 
   useEffect(() => {
     if (!selectedId) {
-        if (archive.records.length > 0 && !draft) {
-            setSelectedId(archive.records[0].id);
-            return;
-        }
+      if (archive.records.length > 0 && !draft) {
+        setSelectedId(archive.records[0].id);
+        return;
+      }
+      if (!draft) {
         const newRec = blankRecord();
+        lastLoadedIdRef.current = newRec.id;
         setDraft(newRec);
         setIsNew(true);
         setSelectedId(newRec.id);
-    } else {
-        const rec = archive.records.find(r => r.id === selectedId);
-        if (rec) {
-            setDraft({...rec});
-            setIsNew(false);
-        }
+      }
+      return;
     }
-  }, [selectedId, archive.records, archive.schema.tipi, setSelectedId]);
 
+    const rec = archive.records.find((r) => r.id === selectedId);
+    if (rec && (lastLoadedIdRef.current !== selectedId || !draft)) {
+      lastLoadedIdRef.current = selectedId;
+      setDraft({ ...rec });
+      setIsNew(false);
+    }
+  }, [selectedId, archive.records, blankRecord, draft, setSelectedId]);
 
-
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!draft || !draft.titolo.trim()) return;
     const now = new Date().toISOString();
     const withOutlinks = updateRecordOutlinks(draft);
-    const updated = {...withOutlinks, modificato: now};
+    const updated = { ...withOutlinks, modificato: now };
     if (isNew) {
-        setArchive(a => ({...a, records: [...a.records, updated]}));
+      setArchive((a) => ({ ...a, records: [...a.records, updated] }));
     } else {
-        setArchive(a => ({...a, records: a.records.map(r => r.id === updated.id ? updated : r)}));
+      setArchive((a) => ({ ...a, records: a.records.map((r) => (r.id === updated.id ? updated : r)) }));
     }
+    lastLoadedIdRef.current = updated.id;
     setDraft(updated);
     setIsNew(false);
     setEditing(false);
     setDirty(true);
-    onToast?.('Scheda salvata ✓');
-    window.scrollTo({top:0});
-  };
+    onToast?.('Scheda salvata');
+    window.scrollTo({ top: 0 });
+  }, [draft, isNew, setArchive, setDirty, onToast]);
 
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 
@@ -126,7 +143,7 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     const nTitle = norm(titolo);
     const nTipo = norm(tipo);
     return archive.records.find(
-      r => r.id !== excludeId && norm(r.titolo || '') === nTitle && norm(r.tipo || '') === nTipo
+      (r) => r.id !== excludeId && norm(r.titolo || '') === nTitle && norm(r.tipo || '') === nTipo
     );
   };
 
@@ -136,22 +153,24 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       message: 'Esiste già una scheda con questo nome. Vuoi aprirla?',
       confirmLabel: 'Apri',
       onConfirm: () => {
+        lastLoadedIdRef.current = existing.id;
+        setDraft({ ...existing });
         setSelectedId(existing.id);
         setEditing(false);
         setFormDirty(false);
         setConfirmDialog(null);
       },
-      onCancel: () => setConfirmDialog(null)
+      onCancel: () => setConfirmDialog(null),
     });
   };
 
-  const handleTemplateSave = (campi: any, template: Template) => {
+  const handleTemplateSave = (campi: any, template: Template, images?: string[]) => {
     if (!draft) return;
     const now = new Date().toISOString();
     const titleFieldId =
-      template.fields.find(f => f.required && f.type === 'text')?.id ||
-      template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
-      template.fields.find(f => f.type === 'text')?.id;
+      template.fields.find((f) => f.required && f.type === 'text')?.id ||
+      template.fields.find((f) => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
+      template.fields.find((f) => f.type === 'text')?.id;
     const titolo = (titleFieldId ? String(campi[titleFieldId] ?? '').trim() : '') || draft.titolo || template.name;
 
     const existing = findDuplicate(titolo, template.id, draft.id);
@@ -159,43 +178,45 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       showDuplicateDialog(existing);
       return;
     }
-    
+
     const updated: Rec = {
       ...draft,
       titolo,
       tipo: template.id,
       categoria: template.name,
       campi,
-      modificato: now
+      images: images ?? draft.images ?? [],
+      modificato: now,
     };
 
     const withOutlinks = updateRecordOutlinks(updated);
-    setArchive(a => {
-      const exists = a.records.some(r => r.id === withOutlinks.id);
+    setArchive((a) => {
+      const exists = a.records.some((r) => r.id === withOutlinks.id);
       return {
         ...a,
         records: exists
-          ? a.records.map(r => r.id === updated.id ? withOutlinks : r)
-          : [...a.records, withOutlinks]
+          ? a.records.map((r) => (r.id === updated.id ? withOutlinks : r))
+          : [...a.records, withOutlinks],
       };
     });
-    
+
+    lastLoadedIdRef.current = withOutlinks.id;
     setDraft(withOutlinks);
     setIsNew(false);
     setFormDirty(false);
     setEditing(false);
     setDirty(true);
-    onToast?.('Scheda salvata ✓');
-    window.scrollTo({top:0});
+    onToast?.('Scheda salvata');
+    window.scrollTo({ top: 0 });
   };
 
-  const handleTemplateAutosave = (campi: any, template: Template): boolean => {
+  const handleTemplateAutosave = (campi: any, template: Template, images?: string[]): boolean => {
     if (!draft) return false;
     const now = new Date().toISOString();
     const titleFieldId =
-      template.fields.find(f => f.required && f.type === 'text')?.id ||
-      template.fields.find(f => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
-      template.fields.find(f => f.type === 'text')?.id;
+      template.fields.find((f) => f.required && f.type === 'text')?.id ||
+      template.fields.find((f) => f.id.includes('nome') || f.id.includes('titolo'))?.id ||
+      template.fields.find((f) => f.type === 'text')?.id;
     const titolo = titleFieldId ? String(campi[titleFieldId] ?? '').trim() : String(draft.titolo ?? '').trim();
     if (!titolo) return false;
 
@@ -210,20 +231,22 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       tipo: template.id,
       categoria: template.name,
       campi,
-      modificato: now
+      images: images ?? draft.images ?? [],
+      modificato: now,
     };
 
     const withOutlinks = updateRecordOutlinks(updated);
-    setArchive(a => {
-      const exists = a.records.some(r => r.id === withOutlinks.id);
+    setArchive((a) => {
+      const exists = a.records.some((r) => r.id === withOutlinks.id);
       return {
         ...a,
         records: exists
-          ? a.records.map(r => r.id === withOutlinks.id ? withOutlinks : r)
-          : [...a.records, withOutlinks]
+          ? a.records.map((r) => (r.id === withOutlinks.id ? withOutlinks : r))
+          : [...a.records, withOutlinks],
       };
     });
 
+    lastLoadedIdRef.current = withOutlinks.id;
     setDraft(withOutlinks);
     setIsNew(false);
     setFormDirty(false);
@@ -240,86 +263,32 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
       return;
     }
     const newRec: Rec = {
-        id: newId,
-        titolo: title,
-        tipo,
-        categoria: tipo,
-        contenuto: `Creato automaticamente tramite link da [[${draft?.titolo || ''}]].\n\n`,
-        tags: [],
-        tag: [],
-        outlinks: [],
-        fonte: '',
-        campi: {},
-        creato: new Date().toISOString(),
-        modificato: new Date().toISOString(),
-        embHash: '',
-        chunks: []
+      id: newId,
+      titolo: title,
+      tipo,
+      categoria: tipo,
+      contenuto: `Creato automaticamente tramite link da [[${draft?.titolo || ''}]].\n\n`,
+      tags: [],
+      tag: [],
+      outlinks: [],
+      fonte: '',
+      campi: {},
+      images: [],
+      creato: new Date().toISOString(),
+      modificato: new Date().toISOString(),
+      embHash: '',
+      chunks: [],
     };
-    setArchive(a => ({...a, records: [...a.records, newRec]}));
+    setArchive((a) => ({ ...a, records: [...a.records, newRec] }));
     setDirty(true);
+    lastLoadedIdRef.current = newRec.id;
+    setDraft(newRec);
     setSelectedId(newRec.id);
   };
 
-  const handleNavigate = (direction: number) => {
-    if (isDirty) {
-        setConfirmDialog({
-            title: t('unsavedChanges'),
-            message: t('unsavedChangesMsg'),
-            onConfirm: () => { handleSave(); setConfirmDialog(null); navigate(direction); },
-            onCancel: () => { setConfirmDialog(null); navigate(direction); }
-        });
-    } else {
-        navigate(direction);
-    }
-  };
-
-  const navigate = (direction: number) => {
-    const nextIndex = Math.max(0, Math.min(filteredRecords.length - 1, currentIndex + direction));
-    setSelectedId(filteredRecords[nextIndex].id);
-  };
-
-  const handleNuovo = () => {
-    if (isDirty) {
-        setConfirmDialog({
-            title: t('unsavedChanges'),
-            message: t('discardAndNewMsg'),
-            onConfirm: () => { setConfirmDialog(null); createNew(); },
-            onCancel: () => setConfirmDialog(null)
-        });
-    } else {
-        createNew();
-    }
-  };
-
-  useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-              e.preventDefault();
-              handleSave();
-          } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-              e.preventDefault();
-              handleNuovo();
-          }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draft, isDirty]);
-
-  const handleViewChange = (newView: 'Modulo' | 'Tabella') => {
-    if (isDirty) {
-        setConfirmDialog({
-            title: t('unsavedChanges'),
-            message: t('unsavedChangesMsg'),
-            onConfirm: () => { handleSave(); setConfirmDialog(null); setView(newView); },
-            onCancel: () => { setConfirmDialog(null); setView(newView); }
-        });
-    } else {
-        setView(newView);
-    }
-  };
-
-  const createNew = () => {
+  const createNew = useCallback(() => {
     const newRec = blankRecord();
+    lastLoadedIdRef.current = newRec.id;
     setDraft(newRec);
     setIsNew(true);
     setSelectedId(newRec.id);
@@ -327,60 +296,129 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
     setFormDirty(false);
     setView('Modulo');
     setTemplateId(null);
+  }, [blankRecord, setSelectedId]);
+
+  const navigate = (direction: number) => {
+    if (filteredRecords.length === 0) return;
+    const nextIndex = Math.max(0, Math.min(filteredRecords.length - 1, currentIndex + direction));
+    const nextRec = filteredRecords[nextIndex];
+    if (nextRec) {
+      lastLoadedIdRef.current = null;
+      setSelectedId(nextRec.id);
+    }
   };
 
-  const handleDuplicate = () => {
-    if (!draft) return;
-    const newTitle = `${draft.titolo} (${lang === 'de' ? 'Kopie' : 'copia'})`;
-    const newId = crypto.randomUUID();
-    const existing = findDuplicate(newTitle, draft.tipo, newId);
-    if (existing) {
-      showDuplicateDialog(existing);
-      return;
+  const handleNavigate = (direction: number) => {
+    if (isDirty) {
+      setConfirmDialog({
+        title: t('unsavedChanges'),
+        message: t('unsavedChangesMsg'),
+        onConfirm: () => {
+          handleSave();
+          setConfirmDialog(null);
+          navigate(direction);
+        },
+        onCancel: () => {
+          setConfirmDialog(null);
+          navigate(direction);
+        },
+      });
+    } else {
+      navigate(direction);
     }
-    const newRec: Rec = {...draft, id: newId, titolo: newTitle, creato: new Date().toISOString(), modificato: new Date().toISOString()};
-    setArchive(a => ({...a, records: [...a.records, newRec]}));
-    setSelectedId(newRec.id);
+  };
+
+  const handleNuovo = useCallback(() => {
+    if (isDirty) {
+      setConfirmDialog({
+        title: t('unsavedChanges'),
+        message: t('discardAndNewMsg'),
+        onConfirm: () => {
+          setConfirmDialog(null);
+          createNew();
+        },
+        onCancel: () => setConfirmDialog(null),
+      });
+    } else {
+      createNew();
+    }
+  }, [isDirty, setConfirmDialog, t, createNew]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        if (!editing) {
+          e.preventDefault();
+          handleSave();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNuovo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editing, handleSave, handleNuovo]);
+
+  const handleViewChange = (newView: 'Modulo' | 'Tabella') => {
+    if (isDirty) {
+      setConfirmDialog({
+        title: t('unsavedChanges'),
+        message: t('unsavedChangesMsg'),
+        onConfirm: () => {
+          handleSave();
+          setConfirmDialog(null);
+          setView(newView);
+        },
+        onCancel: () => {
+          setConfirmDialog(null);
+          setView(newView);
+        },
+      });
+    } else {
+      setView(newView);
+    }
   };
 
   const handleDelete = (targetId?: string) => {
     const idToDelete = targetId ?? selectedId;
     if (!idToDelete) return;
     setConfirmDialog({
-        title: t('deleteRecordTitle'),
-        message: 'Eliminare questa scheda? Non si può annullare.',
-        onConfirm: () => { 
-            const remaining = archive.records.filter(r => r.id !== idToDelete);
-            setArchive(a => {
-                const deleted = a.records.find(r => r.id === idToDelete);
-                const deletedTitle = (deleted?.titolo || '').trim().toLowerCase();
-                return {
-                    ...a,
-                    records: a.records
-                        .filter(r => r.id !== idToDelete)
-                        .map(r => {
-                            if (!deletedTitle || !r.outlinks?.some(o => o.trim().toLowerCase() === deletedTitle)) {
-                                return r;
-                            }
-                            return {
-                                ...r,
-                                outlinks: r.outlinks.filter(o => o.trim().toLowerCase() !== deletedTitle)
-                            };
-                        })
-                };
-            });
-            setDirty(true);
-            setConfirmDialog(null);
-            if (idToDelete === selectedId) {
-                setEditing(false);
-                if (remaining.length > 0) {
-                    setSelectedId(remaining[0].id);
-                } else {
-                    createNew();
+      title: t('deleteRecordTitle'),
+      message: 'Eliminare questa scheda? Non si può annullare.',
+      onConfirm: () => {
+        const remaining = archive.records.filter((r) => r.id !== idToDelete);
+        setArchive((a) => {
+          const deleted = a.records.find((r) => r.id === idToDelete);
+          const deletedTitle = (deleted?.titolo || '').trim().toLowerCase();
+          return {
+            ...a,
+            records: a.records
+              .filter((r) => r.id !== idToDelete)
+              .map((r) => {
+                if (!deletedTitle || !r.outlinks?.some((o) => o.trim().toLowerCase() === deletedTitle)) {
+                  return r;
                 }
-            }
-        },
-        onCancel: () => setConfirmDialog(null)
+                return {
+                  ...r,
+                  outlinks: r.outlinks.filter((o) => o.trim().toLowerCase() !== deletedTitle),
+                };
+              }),
+          };
+        });
+        setDirty(true);
+        setConfirmDialog(null);
+        if (idToDelete === selectedId) {
+          setEditing(false);
+          if (remaining.length > 0) {
+            lastLoadedIdRef.current = null;
+            setSelectedId(remaining[0].id);
+          } else {
+            createNew();
+          }
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
     });
   };
 
@@ -401,10 +439,12 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         const actualRemoved = archive.records.length - cleaned.records.length;
         setArchive(() => cleaned);
         setDirty(true);
-        if (selectedId && !cleaned.records.some(r => r.id === selectedId)) {
+        if (selectedId && !cleaned.records.some((r) => r.id === selectedId)) {
           if (cleaned.records.length > 0) {
+            lastLoadedIdRef.current = null;
             setSelectedId(cleaned.records[0].id);
           } else {
+            lastLoadedIdRef.current = null;
             setDraft(null);
             setSelectedId(null);
           }
@@ -412,233 +452,228 @@ export function DataTab({archive, setArchive, setDirty, onGoStructure, selectedI
         setConfirmDialog(null);
         onToast?.(`Rimosse ${actualRemoved} ${actualRemoved === 1 ? 'scheda' : 'schede'}`);
       },
-      onCancel: () => setConfirmDialog(null)
+      onCancel: () => setConfirmDialog(null),
     });
   };
 
   if (archive.records.length === 0 && !draft) {
-      return (
-          <EmptyState 
-              icon={FileText} 
-              title="Nessuna scheda presente" 
-              text="Inizia aggiungendo la tua prima scheda nello schedario." 
-              action={{label: "Aggiungi la prima scheda", onClick: () => createNew()}} 
-          />
-      );
+    return (
+      <EmptyState
+        icon={FileText}
+        title="Nessuna scheda presente"
+        text="Inizia aggiungendo la tua prima scheda nello schedario."
+        action={{ label: 'Aggiungi la prima scheda', onClick: () => createNew() }}
+      />
+    );
   }
 
   if (!draft) return null;
 
   return (
     <div className="space-y-8 text-text-primary text-base">
-        <div className="sticky top-[110px] bg-bg-primary/95 z-10 py-4 -mx-6 px-6">
-            <div className="max-w-7xl mx-auto space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-card-bg p-4 rounded-3xl border border-border-primary shadow-sm">
-                    <div className="flex items-center gap-1 bg-bg-alt p-1 rounded-2xl border border-border-primary">
-                        <Button variant="ghost" size="sm" onClick={() => handleNavigate(-1)} disabled={currentIndex <= 0} className="w-10 h-10 p-0 rounded-xl"><ChevronLeft size={20}/></Button>
-                        <div className="px-4 text-xs font-bold text-text-muted tracking-tighter">
-                            {currentIndex + 1} <span className="opacity-40">/</span> {filteredRecords.length}
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleNavigate(1)} disabled={currentIndex >= filteredRecords.length - 1} className="w-10 h-10 p-0 rounded-xl"><ChevronRight size={20}/></Button>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        <div className="hidden sm:flex bg-bg-alt p-1 rounded-2xl border border-border-primary mr-2">
-                            <button 
-                                onClick={() => handleViewChange('Modulo')} 
-                                className={`p-2 rounded-xl transition-all ${view === 'Modulo' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
-                                title={t('viewModule')}
-                            >
-                                <FileText size={20}/>
-                            </button>
-                            <button 
-                                onClick={() => handleViewChange('Tabella')} 
-                                className={`p-2 rounded-xl transition-all ${view === 'Tabella' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
-                                title={t('viewTable')}
-                            >
-                                <TableIcon size={20}/>
-                            </button>
-                        </div>
-                        
-                        {draft && (draft.campi?.['nome_principale'] || draft.campi?.['ideogramma'] || draft.titolo) && (
-                            <PronunciationButton
-                                text={draft.campi?.['ideogramma'] || draft.campi?.['nome_principale'] || draft.titolo}
-                                label="Pronuncia"
-                                size="sm"
-                                variant="secondary"
-                                showSpeedToggle={true}
-                                className="hidden md:inline-flex"
-                                title="Ascolta pronuncia del punto in cinese semplificato"
-                            />
-                        )}
-
-                        {!editing && <Button variant="secondary" size="sm" onClick={handleCleanDuplicates} title="Rimuovi schede doppie o vuote">Pulisci doppioni</Button>}
-                        {!editing && <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">+ Nuova scheda</Button>}
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete()} icon={Trash2} className="text-red-600 hover:bg-red-50 hover:text-red-700 px-3 py-2 rounded-xl">Elimina</Button>
-                        {!editing && (
-                          <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
-                              {isDirty ? 'Salva Modifiche' : 'Salvato'}
-                          </Button>
-                        )}
-                    </div>
-                </div>
+      <div className="sticky top-[110px] bg-bg-primary/95 z-10 py-4 -mx-6 px-6">
+        <div className="max-w-7xl mx-auto space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-card-bg p-4 rounded-3xl border border-border-primary shadow-sm">
+            <div className="flex items-center gap-1 bg-bg-alt p-1 rounded-2xl border border-border-primary">
+              <Button variant="ghost" size="sm" onClick={() => handleNavigate(-1)} disabled={currentIndex <= 0} className="w-10 h-10 p-0 rounded-xl">
+                <ChevronLeft size={20} />
+              </Button>
+              <div className="px-4 text-xs font-bold text-text-muted tabular-nums">
+                {currentIndex >= 0 ? currentIndex + 1 : 0} <span className="opacity-40">/</span> {filteredRecords.length}
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => handleNavigate(1)} disabled={currentIndex >= filteredRecords.length - 1} className="w-10 h-10 p-0 rounded-xl">
+                <ChevronRight size={20} />
+              </Button>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden sm:flex bg-bg-alt p-1 rounded-2xl border border-border-primary mr-2">
+                <button
+                  onClick={() => handleViewChange('Modulo')}
+                  className={`p-2 rounded-xl transition-all ${view === 'Modulo' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
+                  title={t('viewModule')}
+                >
+                  <FileText size={20} />
+                </button>
+                <button
+                  onClick={() => handleViewChange('Tabella')}
+                  className={`p-2 rounded-xl transition-all ${view === 'Tabella' ? 'bg-card-bg text-accent shadow-sm' : 'text-text-muted hover:text-text-primary'}`}
+                  title={t('viewTable')}
+                >
+                  <TableIcon size={20} />
+                </button>
+              </div>
+
+              {draft && (draft.campi?.['nome_principale'] || draft.campi?.['ideogramma'] || draft.titolo) && (
+                <PronunciationButton
+                  text={draft.campi?.['ideogramma'] || draft.campi?.['nome_principale'] || draft.titolo}
+                  label="Pronuncia"
+                  size="sm"
+                  variant="secondary"
+                  showSpeedToggle={true}
+                  className="hidden md:inline-flex"
+                  title="Ascolta pronuncia del punto in cinese semplificato"
+                />
+              )}
+
+              {!editing && (
+                <Button variant="secondary" size="sm" onClick={handleCleanDuplicates} title="Rimuovi schede doppie o vuote">
+                  Pulisci doppioni
+                </Button>
+              )}
+              {!editing && (
+                <Button variant="primary" size="lg" onClick={handleNuovo} className="fixed bottom-28 right-4 z-30 shadow-xl lg:static lg:shadow-none">
+                  + Nuova scheda
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete()}
+                icon={Trash2}
+                className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 px-3 py-2 rounded-xl"
+              >
+                Elimina
+              </Button>
+              {!editing && (
+                <Button variant="primary" onClick={handleSave} disabled={!isDirty} icon={Save} className="px-8 shadow-lg shadow-emerald-900/10">
+                  {isDirty ? 'Salva Modifiche' : 'Salvato'}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
+      </div>
 
-        {view === 'Modulo' ? (
-            <div className={`${editing ? 'w-full' : 'grid lg:grid-cols-2 gap-12 items-start'} pt-4`}>
-                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-                    {editing ? (
-                      <DynamicForm 
-                        key={draft.id}
-                        initialValues={isNew ? {} : draft} 
-                        templateId={(isNew ? templateId : templates.some(t => t.id === draft.tipo) ? draft.tipo : undefined) || undefined}
-                        onSave={handleTemplateSave}
-                        onAutosave={handleTemplateAutosave}
-                        onDirty={setFormDirty}
-                        onCancel={() => {
-                          const closeForm = () => {
-                            setFormDirty(false);
-                            setEditing(false);
-                            if (isNew) setSelectedId(filteredRecords[0]?.id || null);
-                          };
-                          if (formDirty) {
-                            setConfirmDialog({
-                              title: 'Modifiche non salvate',
-                              message: 'Uscire senza salvare?',
-                              onConfirm: () => {
-                                setConfirmDialog(null);
-                                closeForm();
-                              },
-                              onCancel: () => setConfirmDialog(null)
-                            });
-                          } else {
-                            closeForm();
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="space-y-8">
-                        <CardPreview record={draft} />
-                        <div className="flex justify-center">
-                          <Button variant="outline" size="lg" onClick={() => { setFormDirty(false); setEditing(true); }} className="w-full sm:w-auto px-12 rounded-2xl">
-                            Modifica scheda
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+      {view === 'Modulo' ? (
+        <div className={`${editing ? 'w-full' : 'grid lg:grid-cols-2 gap-12 items-start'} pt-4`}>
+          <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+            {editing ? (
+              <DynamicForm
+                key={draft.id}
+                initialValues={isNew ? {} : draft}
+                templateId={(isNew ? templateId : templates.some((tpl) => tpl.id === draft.tipo) ? draft.tipo : undefined) || undefined}
+                onSave={handleTemplateSave}
+                onAutosave={handleTemplateAutosave}
+                onDirty={setFormDirty}
+                onCancel={() => {
+                  const closeForm = () => {
+                    setFormDirty(false);
+                    setEditing(false);
+                    if (isNew && filteredRecords[0]) {
+                      lastLoadedIdRef.current = null;
+                      setSelectedId(filteredRecords[0].id);
+                    }
+                  };
+                  if (formDirty) {
+                    setConfirmDialog({
+                      title: 'Modifiche non salvate',
+                      message: 'Uscire senza salvare?',
+                      onConfirm: () => {
+                        setConfirmDialog(null);
+                        closeForm();
+                      },
+                      onCancel: () => setConfirmDialog(null),
+                    });
+                  } else {
+                    closeForm();
+                  }
+                }}
+              />
+            ) : (
+              <div className="space-y-8">
+                <CardPreview record={draft} />
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => {
+                      setFormDirty(false);
+                      setEditing(true);
+                    }}
+                    className="w-full sm:w-auto px-12 rounded-2xl"
+                  >
+                    Modifica scheda
+                  </Button>
                 </div>
+              </div>
+            )}
+          </div>
 
-                {!editing && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <div className="bg-card-bg rounded-[2.5rem] p-8 border border-border-primary shadow-sm space-y-6">
-                            <div className="flex items-center gap-3 border-b border-stone-100 pb-4">
-                                <div className="w-8 h-8 bg-bg-alt rounded-lg flex items-center justify-center text-text-muted">
-                                    <FileText size={18} />
-                                </div>
-                                <h3 className="font-bold text-text-primary tracking-tight">Contenuto Libero & Wiki</h3>
-                            </div>
-                            <WikiContent
-                                content={draft.contenuto}
-                                archive={archive}
-                                onSelectRecord={id => setSelectedId(id)}
-                                onCreateRecord={title => handleCreateRecordFromWiki(title)}
-                                editable={true}
-                                onChange={val => {
-                                  const next = {...draft, contenuto: val};
-                                  setDraft(next);
-                                  setArchive(a => ({...a, records: a.records.map(r => r.id === draft.id ? next : r)}));
-                                  setDirty(true);
-                                }}
-                            />
-                        </div>
-                        <LinkPanel
-                            archive={archive}
-                            currentRecord={draft}
-                            onSelectRecord={id => setSelectedId(id)}
-                            onCreateRecord={title => handleCreateRecordFromWiki(title)}
-                        />
-                    </div>
-                )}
+          {!editing && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="bg-card-bg rounded-[2.5rem] p-8 border border-border-primary shadow-sm space-y-6">
+                <div className="flex items-center gap-3 border-b border-border-primary pb-4">
+                  <div className="w-8 h-8 bg-bg-alt rounded-lg flex items-center justify-center text-text-muted">
+                    <FileText size={18} />
+                  </div>
+                  <h3 className="font-bold text-text-primary tracking-tight">Contenuto Libero &amp; Wiki</h3>
+                </div>
+                <WikiContent
+                  content={draft.contenuto}
+                  archive={archive}
+                  onSelectRecord={(id) => {
+                    lastLoadedIdRef.current = null;
+                    setSelectedId(id);
+                  }}
+                  onCreateRecord={(title) => handleCreateRecordFromWiki(title)}
+                  editable={true}
+                  onChange={(val) => {
+                    const next = { ...draft, contenuto: val };
+                    setDraft(next);
+                    setArchive((a) => ({
+                      ...a,
+                      records: a.records.map((r) => (r.id === draft.id ? next : r)),
+                    }));
+                    setDirty(true);
+                  }}
+                />
+              </div>
+              <LinkPanel
+                archive={archive}
+                currentRecord={draft}
+                onSelectRecord={(id) => {
+                  lastLoadedIdRef.current = null;
+                  setSelectedId(id);
+                }}
+                onCreateRecord={(title) => handleCreateRecordFromWiki(title)}
+              />
             </div>
-        ) : (
-            <div className="bg-card-bg border border-border-primary rounded-[2.5rem] shadow-sm overflow-x-auto max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-bg-alt/80 text-text-muted text-[11px] font-bold uppercase tracking-widest border-b border-border-primary">
-                            <th className="px-8 py-5 cursor-pointer hover:text-stone-900 transition-colors" onClick={() => {setSortField('titolo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('titleLabel').replace('*', '')}</th>
-                            <th className="px-6 py-5 cursor-pointer hover:text-stone-900 transition-colors" onClick={() => {setSortField('tipo'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{t('typeLabel')}</th>
-                            <th className="px-6 py-5">{t('tagsLabel')}</th>
-                            <th className="px-8 py-5 cursor-pointer hover:text-stone-900 transition-colors text-right" onClick={() => {setSortField('modificato'); setSortDir(sortDir==='asc'?'desc':'asc')}}>{lang === 'de' ? 'Geändert' : 'Modificato'}</th>
-                            <th className="px-6 py-5 text-right">Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-bg-alt/50">
-                        {filteredRecords.map(r => (
-                            <tr key={r.id} className="group hover:bg-stone-50/50 cursor-pointer transition-colors" onClick={() => {setSelectedId(r.id); setView('Modulo');}}>
-                                <td className="px-8 py-4">
-                                    <div className="font-bold text-text-primary group-hover:text-accent transition-colors">{r.titolo}</div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="px-3 py-1 bg-bg-alt text-text-muted rounded-full text-[10px] font-bold uppercase tracking-wider group-hover:bg-accent/10 group-hover:text-accent transition-colors">{r.tipo}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-wrap gap-1">
-                                        {r.tags.slice(0, 3).map(tag => (
-                                            <span key={tag} className="text-xs text-stone-400 font-medium">#{tag}</span>
-                                        ))}
-                                        {r.tags.length > 3 && <span className="text-xs text-stone-300">+{r.tags.length - 3}</span>}
-                                    </div>
-                                </td>
-                                <td className="px-8 py-4 text-right">
-                                    <span className="text-stone-400 font-mono text-xs">{new Date(r.modificato).toLocaleDateString(lang === 'de' ? 'de-DE' : 'it-IT')}</span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="inline-flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon={Pencil}
-                                            onClick={(e: React.MouseEvent) => {
-                                                e.stopPropagation();
-                                                setSelectedId(r.id);
-                                                setDraft({...r});
-                                                setIsNew(false);
-                                                setFormDirty(false);
-                                                setEditing(true);
-                                                setView('Modulo');
-                                            }}
-                                            className="text-text-primary hover:bg-bg-alt px-3 py-1.5 rounded-xl"
-                                        >
-                                            Modifica
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon={Trash2}
-                                            onClick={(e: React.MouseEvent) => {
-                                                e.stopPropagation();
-                                                handleDelete(r.id);
-                                            }}
-                                            className="text-red-600 hover:bg-red-50 hover:text-red-700 px-3 py-1.5 rounded-xl"
-                                        >
-                                            Elimina
-                                        </Button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {filteredRecords.length === 0 && (
-                    <div className="p-20 text-center text-stone-400 font-medium italic">
-                        Nessun risultato trovato per "{searchTerm}"
-                    </div>
-                )}
-            </div>
-        )}
+          )}
+        </div>
+      ) : (
+        <DataTableView
+          records={filteredRecords}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={(field) => {
+            if (sortField === field) {
+              setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+            } else {
+              setSortField(field);
+              setSortDir('asc');
+            }
+          }}
+          onSelectRecord={(id) => {
+            lastLoadedIdRef.current = null;
+            setSelectedId(id);
+            setView('Modulo');
+          }}
+          onEditRecord={(rec) => {
+            lastLoadedIdRef.current = rec.id;
+            setSelectedId(rec.id);
+            setDraft({ ...rec });
+            setIsNew(false);
+            setFormDirty(false);
+            setEditing(true);
+            setView('Modulo');
+          }}
+          onDeleteRecord={(id) => handleDelete(id)}
+          searchTerm={searchTerm}
+          lang={lang}
+          t={t}
+        />
+      )}
     </div>
   );
 }
-
-

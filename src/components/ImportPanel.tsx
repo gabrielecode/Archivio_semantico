@@ -84,6 +84,7 @@ export function ImportPanel({archive, setArchive, setDirty, onClose, toast}: {
                 outlinks: [],
                 fonte: r.fonte || '',
                 campi: r.campi || {},
+                images: [],
                 creato: new Date().toISOString(),
                 modificato: new Date().toISOString(),
                 embHash: '',

@@ -185,7 +185,7 @@ export function DriveBackupDialog({store, driveBackup, onClose, onOpenArchive, t
                                 <div>
                                     <p className="font-semibold text-emerald-900 text-base">Google Drive collegato</p>
                                     <p className="text-emerald-700 text-xs">
-                                        Ultimo backup: {lastBackupTime ? new Date(lastBackupTime).toLocaleString('it-IT') : 'Mai eseguito'}
+                                        Ultimo backup: {lastBackupTime ? new Date(lastBackupTime).toLocaleString('it-IT') : 'Mai eseguito'} • Automatico ogni 15 min
                                     </p>
                                 </div>
                             </div>

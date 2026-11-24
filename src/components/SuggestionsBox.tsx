@@ -88,6 +88,7 @@ export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: Suggestio
             outlinks: [],
             fonte: '',
             campi: {},
+            images: [],
             creato: new Date().toISOString(),
             modificato: new Date().toISOString(),
             embHash: '',

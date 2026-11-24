@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Template, FieldDef } from '../types';
 import { ListField, ImageField, VideoField, LinkField, SelectField } from './DynamicFormFields';
 import { inputCls, Field, Button } from './ui';
-import { ChevronLeft, Info, Volume2 } from 'lucide-react';
+import { ChevronLeft, Info, Volume2, Image as ImageIcon, Upload, Plus, X, Loader2 } from 'lucide-react';
 import { PronunciationButton } from './PronunciationButton';
 import templatesData from '../templates.json';
 
@@ -25,11 +25,55 @@ const TEMPLATE_DESCRIPTIONS: Record<string, string> = {
   fisiologia: 'Fisiologia secondo MCC e MTC'
 };
 
+const MAX_GALLERY_DIM = 1280;
+
+function readGalleryImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error(`Il file "${file.name}" non è un'immagine valida.`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Impossibile leggere "${file.name}".`));
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+        resolve(dataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => resolve(dataUrl);
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, MAX_GALLERY_DIM / Math.max(img.width || 1, img.height || 1));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(dataUrl);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const outType = file.type === 'image/png' && file.size < 300_000 ? 'image/png' : 'image/jpeg';
+          resolve(canvas.toDataURL(outType, 0.82));
+        } catch {
+          resolve(dataUrl);
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 interface DynamicFormProps {
   initialValues?: any;
   templateId?: string;
-  onSave: (values: any, template: Template) => void;
-  onAutosave?: (values: any, template: Template) => boolean | void;
+  onSave: (values: any, template: Template, images?: string[]) => void;
+  onAutosave?: (values: any, template: Template, images?: string[]) => boolean | void;
   onCancel: () => void;
   onDirty?: (d: boolean) => void;
 }
@@ -39,10 +83,19 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave
     templates.find(t => t.id === (templateId || initialValues.templateId)) || null
   );
   const [values, setValues] = useState<any>(initialValues.campi || {});
+  const [images, setImages] = useState<string[]>(
+    Array.isArray(initialValues.images) ? initialValues.images.filter((u: any) => typeof u === 'string' && u.trim() !== '') : []
+  );
+  const [galleryUrl, setGalleryUrl] = useState('');
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const galleryFileRef = useRef<HTMLInputElement>(null);
   const [autosaveTime, setAutosaveTime] = useState<string | null>(null);
   const dirtyRef = useRef(false);
   const valuesRef = useRef<any>(values);
   valuesRef.current = values;
+  const imagesRef = useRef<string[]>(images);
+  imagesRef.current = images;
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onAutosaveRef = useRef(onAutosave);
   onAutosaveRef.current = onAutosave;
@@ -74,15 +127,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave
     return titleFieldId ? String(vals[titleFieldId] ?? '').trim() : String(initialValues?.titolo ?? '').trim();
   };
 
-  const handleFieldChange = (id: string, val: any) => {
-    const nextValues = { ...valuesRef.current, [id]: val };
-    valuesRef.current = nextValues;
-    setValues(nextValues);
-    if (!dirtyRef.current) {
-      dirtyRef.current = true;
-      onDirty?.(true);
-    }
-
+  const scheduleAutosave = (nextValues: any, nextImages: string[]) => {
     clearAutosaveTimer();
     if (selectedTemplate && onAutosaveRef.current) {
       const derivedTitle = getDerivedTitle(nextValues, selectedTemplate);
@@ -90,7 +135,7 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave
         const tmpl = selectedTemplate;
         autosaveTimerRef.current = setTimeout(() => {
           autosaveTimerRef.current = null;
-          const res = onAutosaveRef.current?.(nextValues, tmpl);
+          const res = onAutosaveRef.current?.(nextValues, tmpl, nextImages);
           if (res !== false) {
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
@@ -104,11 +149,59 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave
     }
   };
 
+  const handleFieldChange = (id: string, val: any) => {
+    const nextValues = { ...valuesRef.current, [id]: val };
+    valuesRef.current = nextValues;
+    setValues(nextValues);
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onDirty?.(true);
+    }
+    scheduleAutosave(nextValues, imagesRef.current);
+  };
+
+  const updateImages = (nextImages: string[]) => {
+    imagesRef.current = nextImages;
+    setImages(nextImages);
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onDirty?.(true);
+    }
+    scheduleAutosave(valuesRef.current, nextImages);
+  };
+
+  const handleGalleryFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setGalleryError(null);
+    setGalleryUploading(true);
+    try {
+      const uploaded = await Promise.all(Array.from(fileList).map(readGalleryImage));
+      updateImages([...imagesRef.current, ...uploaded]);
+    } catch (err: any) {
+      setGalleryError(err?.message || 'Errore durante il caricamento delle immagini.');
+    } finally {
+      setGalleryUploading(false);
+      if (galleryFileRef.current) galleryFileRef.current.value = '';
+    }
+  };
+
+  const handleAddGalleryUrl = () => {
+    const trimmed = galleryUrl.trim();
+    if (!trimmed) return;
+    setGalleryError(null);
+    updateImages([...imagesRef.current, trimmed]);
+    setGalleryUrl('');
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    updateImages(imagesRef.current.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTemplate) return;
     clearAutosaveTimer();
-    onSave(values, selectedTemplate);
+    onSave(values, selectedTemplate, images);
   };
 
   return (
@@ -367,6 +460,81 @@ export const DynamicForm = ({ initialValues = {}, templateId, onSave, onAutosave
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="pt-6 border-t border-stone-200 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon size={18} className="text-stone-500" />
+                    <h4 className="text-sm font-bold text-stone-800 uppercase tracking-wide">Galleria Immagini ({images.length})</h4>
+                  </div>
+                  <input
+                    ref={galleryFileRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleGalleryFiles(e.target.files)}
+                  />
+                  <button
+                    type="button"
+                    disabled={galleryUploading}
+                    onClick={() => galleryFileRef.current?.click()}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium bg-stone-100 hover:bg-stone-200 text-stone-800 transition-colors disabled:opacity-50"
+                  >
+                    {galleryUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {galleryUploading ? 'Caricamento...' : 'Carica foto'}
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="url"
+                    value={galleryUrl}
+                    onChange={(e) => setGalleryUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddGalleryUrl();
+                      }
+                    }}
+                    placeholder="Incolla URL immagine (https://...)"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleAddGalleryUrl}
+                    disabled={!galleryUrl.trim()}
+                    icon={Plus}
+                    className="sm:w-auto"
+                  >
+                    Aggiungi URL
+                  </Button>
+                </div>
+
+                {galleryError && <p className="text-xs font-medium text-red-600">{galleryError}</p>}
+
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {images.map((src, idx) => (
+                      <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden border border-stone-200 bg-stone-50">
+                        <img src={src} alt={`Immagine galleria ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryImage(idx)}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-stone-900/75 text-white hover:bg-red-600 transition-colors shadow-sm"
+                          title="Rimuovi foto"
+                          aria-label={`Rimuovi immagine ${idx + 1}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-400 italic">Nessuna immagine nella galleria di questa scheda.</p>
+                )}
               </div>
             </div>
           </div>

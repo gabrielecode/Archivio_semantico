@@ -134,6 +134,26 @@ export const CardPreview = ({ record }: { record: Rec }) => {
             </div>
           );
         })}
+
+        {Array.isArray(record.images) && record.images.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-stone-100">
+            <div className="text-sm uppercase font-bold text-stone-400 tracking-wider">
+              Galleria immagini ({record.images.length})
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {record.images.map((url, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setLightboxUrl(url)}
+                  className="aspect-square rounded-lg overflow-hidden border border-stone-200 block bg-stone-50 hover:opacity-90 transition-opacity cursor-zoom-in"
+                >
+                  <img src={url} alt={`Galleria ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

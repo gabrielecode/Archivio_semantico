@@ -1,20 +1,22 @@
 /**
  * Utility per la pronuncia in Cinese Semplificato (zh-CN)
  * Supporta sia Web Speech API (sintesi nativa client-side istantanea)
- * sia fallback audio cloud ad alta fedeltà tramite /api/tts.
+ * sia fallback audio cloud autenticato tramite /api/tts.
  */
+import { auth } from '../lib/firebase';
 
 type SpeechStatusListener = (state: { isSpeaking: boolean; speakingText: string | null; error?: string | null }) => void;
 
 class ChineseSpeechManager {
   private currentAudio: HTMLAudioElement | null = null;
+  private currentObjectUrl: string | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private isSpeaking = false;
   private speakingText: string | null = null;
   private listeners: Set<SpeechStatusListener> = new Set();
   private chineseVoices: SpeechSynthesisVoice[] = [];
   private voicesLoaded = false;
-  public defaultSpeed = 0.85; // 0.85x per una chiara scansione di toni e sillabe
+  public defaultSpeed = 0.85;
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -28,7 +30,7 @@ class ChineseSpeechManager {
   private loadVoices() {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     const voices = window.speechSynthesis.getVoices() || [];
-    this.chineseVoices = voices.filter(v => {
+    this.chineseVoices = voices.filter((v) => {
       const l = (v.lang || '').toLowerCase();
       const n = (v.name || '').toLowerCase();
       return (
@@ -64,6 +66,13 @@ class ChineseSpeechManager {
     }
   }
 
+  private releaseObjectUrl() {
+    if (this.currentObjectUrl) {
+      URL.revokeObjectURL(this.currentObjectUrl);
+      this.currentObjectUrl = null;
+    }
+  }
+
   public stop() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
@@ -81,6 +90,7 @@ class ChineseSpeechManager {
       }
       this.currentAudio = null;
     }
+    this.releaseObjectUrl();
     this.currentUtterance = null;
     this.isSpeaking = false;
     this.speakingText = null;
@@ -91,7 +101,6 @@ class ChineseSpeechManager {
     const cleanText = text.trim();
     if (!cleanText) return false;
 
-    // Se sta già pronunciando lo stesso testo, ferma la riproduzione (toggle)
     if (this.isSpeaking && this.speakingText === cleanText) {
       this.stop();
       return false;
@@ -102,16 +111,13 @@ class ChineseSpeechManager {
     const speed = options?.speed || this.defaultSpeed;
     const preferCloud = options?.preferCloud ?? false;
 
-    // Se è preferito il cloud o non c'è supporto per SpeechSynthesis, usa il fallback /api/tts
     const hasWebSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
-    const hasVoice = this.hasNativeChineseVoice();
 
-    if (!preferCloud && hasWebSpeech) {
+    if (!preferCloud && hasWebSpeech && this.hasNativeChineseVoice()) {
       const success = this.speakNative(cleanText, speed);
       if (success) return true;
     }
 
-    // Fallback cloud
     return this.speakCloud(cleanText, speed);
   }
 
@@ -122,14 +128,13 @@ class ChineseSpeechManager {
       utterance.rate = speed;
       utterance.pitch = 1.0;
 
-      // Trova la migliore voce per il Cinese Semplificato (Mandarin)
       const voices = this.getAvailableChineseVoices();
       const preferredVoice =
-        voices.find(v => {
+        voices.find((v) => {
           const l = (v.lang || '').toLowerCase();
           return l === 'zh-cn' || l === 'zh_cn' || l.includes('cmn-hans-cn');
         }) ||
-        voices.find(v => (v.lang || '').toLowerCase().startsWith('zh')) ||
+        voices.find((v) => (v.lang || '').toLowerCase().startsWith('zh')) ||
         voices[0];
 
       if (preferredVoice) {
@@ -154,13 +159,12 @@ class ChineseSpeechManager {
         this.isSpeaking = false;
         this.speakingText = null;
         this.currentUtterance = null;
-        this.speakCloud(text, speed);
+        void this.speakCloud(text, speed);
       };
 
       this.currentUtterance = utterance;
       window.speechSynthesis.speak(utterance);
 
-      // Risolvi il bug di Chrome che può mettere in pausa speechSynthesis
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
@@ -172,10 +176,24 @@ class ChineseSpeechManager {
     }
   }
 
-  private speakCloud(text: string, speed: number): boolean {
+  private async speakCloud(text: string, speed: number): Promise<boolean> {
     try {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
       const url = `/api/tts?text=${encodeURIComponent(text)}&lang=zh-CN`;
-      const audio = new Audio(url);
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      this.releaseObjectUrl();
+      this.currentObjectUrl = objectUrl;
+
+      const audio = new Audio(objectUrl);
       audio.playbackRate = speed;
 
       audio.onplay = () => {
@@ -188,30 +206,26 @@ class ChineseSpeechManager {
         this.isSpeaking = false;
         this.speakingText = null;
         this.currentAudio = null;
+        this.releaseObjectUrl();
         this.notify();
       };
 
-      audio.onerror = (e) => {
-        console.error('Errore riproduzione audio cloud:', e);
+      audio.onerror = () => {
         this.isSpeaking = false;
         this.speakingText = null;
         this.currentAudio = null;
+        this.releaseObjectUrl();
         this.notify('Impossibile riprodurre la pronuncia audio.');
       };
 
       this.currentAudio = audio;
-      audio.play().catch(err => {
-        console.error('Play audio error:', err);
-        this.isSpeaking = false;
-        this.speakingText = null;
-        this.notify(err.message);
-      });
-
+      await audio.play();
       return true;
     } catch (err: any) {
       console.error('Audio cloud init error:', err);
       this.isSpeaking = false;
       this.speakingText = null;
+      this.releaseObjectUrl();
       this.notify(err?.message || 'Errore audio');
       return false;
     }

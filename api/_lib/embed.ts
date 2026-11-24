@@ -1,85 +1,93 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
-import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
+import { verifyFirebaseAuth, SlidingWindowLimiter, RequestLike, ResponseLike } from './auth.js';
+import { EMBEDDING_MODEL_CATALOG, getDefaultEmbeddingModelId, resolveEmbeddingModel } from './models.js';
 
-type RequestLike = {
-    method?: string;
-    body: any;
-    headers: Record<string, any>;
-    socket: { remoteAddress?: string };
-};
-type ResponseLike = {
-    status: (code: number) => { json: (data: any) => void };
-    setHeader: (name: string, value: string) => void;
-};
+const queryLimiter = new SlidingWindowLimiter(60_000);
+const documentLimiter = new SlidingWindowLimiter(60_000);
 
-const JWKS = createRemoteJWKSet(
-    new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
-);
+const RETRYABLE_STATUSES = new Set([429, 503, 529]);
+const RETRY_DELAYS_MS = [500, 1500, 4000];
 
-async function verifyAuth(req: RequestLike): Promise<string | null> {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-    const token = authHeader.split('Bearer ')[1];
-    const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
-    if (!projectId) return null;
+export function normalizeL2Vector(vec: unknown, expectedDim: number): number[] | null {
+    if (!Array.isArray(vec) || vec.length === 0) return null;
+    if (expectedDim > 0 && vec.length !== expectedDim) return null;
 
-    try {
-        const { payload } = await jwtVerify(token, JWKS, {
-            issuer: `https://securetoken.google.com/${projectId}`,
-            audience: projectId,
-        });
-        if (payload.email_verified !== true) {
+    let sumSquares = 0;
+    for (let i = 0; i < vec.length; i++) {
+        const v = vec[i];
+        if (typeof v !== 'number' || !Number.isFinite(v)) {
             return null;
         }
-        return payload.sub as string;
-    } catch (e) {
-        return null;
+        sumSquares += v * v;
     }
+
+    const norm = Math.sqrt(sumSquares);
+    if (!Number.isFinite(norm) || norm === 0) return null;
+
+    return (vec as number[]).map((v) => v / norm);
 }
 
-const queryRateLimit = new Map<string, { count: number; resetTime: number }>();
-const documentRateLimit = new Map<string, { count: number; resetTime: number }>();
-
-setInterval(() => {
-    const now = Date.now();
-    for (const [id, data] of queryRateLimit.entries()) {
-        if (now > data.resetTime) queryRateLimit.delete(id);
-    }
-    for (const [id, data] of documentRateLimit.entries()) {
-        if (now > data.resetTime) documentRateLimit.delete(id);
-    }
-}, 60000).unref();
-
-export const healthHandler = (req: RequestLike, res: ResponseLike) => {
-    res.status(200).json({ embed: !!process.env.OPENROUTER_API_KEY });
+export const healthHandler = (_req: RequestLike, res: ResponseLike) => {
+    const defaultModelId = getDefaultEmbeddingModelId();
+    const resolved = resolveEmbeddingModel(defaultModelId);
+    res.status(200).json({
+        embed: Boolean(process.env.OPENROUTER_API_KEY),
+        defaultModel: resolved?.id || defaultModelId,
+        defaultDim: resolved?.dim || 1536,
+        models: EMBEDDING_MODEL_CATALOG,
+    });
 };
 
 export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
-    const userId = await verifyAuth(req);
-    if (!userId) {
+    if (req.method && req.method !== 'POST') {
+        return res.status(405).json({ error: 'Metodo non consentito' });
+    }
+
+    const user = await verifyFirebaseAuth(req);
+    if (!user) {
         return res.status(401).json({ error: 'Non autorizzato' });
     }
 
-    const { texts, mode } = req.body;
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Payload richiesta non valido' });
+    }
 
-    const now = Date.now();
-    const limitMap = mode === 'query' ? queryRateLimit : documentRateLimit;
-    const limit = mode === 'query' ? 60 : 20;
-    
-    const data = limitMap.get(userId) || { count: 0, resetTime: now + 60000 };
-    if (data.resetTime < now) { data.count = 0; data.resetTime = now + 60000; }
-    if (data.count >= limit) return res.status(429).json({ error: 'Too many requests' });
-    data.count++;
-    limitMap.set(userId, data);
+    const { texts, mode = 'document', model } = req.body as {
+        texts?: unknown;
+        mode?: unknown;
+        model?: unknown;
+    };
 
-    if (!Array.isArray(texts) || texts.length === 0 || texts.length > 50 || !texts.every(t => typeof t === 'string' && t.trim().length > 0 && t.length <= 2000)) {
-        return res.status(400).json({ error: 'Invalid texts' });
+    if (mode !== 'query' && mode !== 'document') {
+        return res.status(400).json({ error: 'Modalità embedding non valida' });
+    }
+
+    const resolvedModel = resolveEmbeddingModel(model);
+    if (!resolvedModel) {
+        return res.status(400).json({ error: 'Modello di embedding non supportato' });
+    }
+
+    const allowed =
+        mode === 'query'
+            ? queryLimiter.consume(user.uid, 60)
+            : documentLimiter.consume(user.uid, 25);
+
+    if (!allowed) {
+        return res.status(429).json({ error: 'Troppe richieste, riprova tra poco' });
+    }
+
+    if (
+        !Array.isArray(texts) ||
+        texts.length === 0 ||
+        texts.length > 50 ||
+        !texts.every((t) => typeof t === 'string' && t.trim().length > 0 && t.length <= 2000)
+    ) {
+        return res.status(400).json({ error: 'Testi non validi per embedding' });
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: 'Servizio embedding non disponibile' });
+    if (!apiKey) {
+        return res.status(503).json({ error: 'Servizio embedding non disponibile' });
+    }
 
     let attempts = 0;
     let responseData: any = null;
@@ -89,33 +97,34 @@ export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
             const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: process.env.OPENROUTER_EMBED_MODEL || 'openai/text-embedding-3-small',
+                    model: resolvedModel.id,
                     input: texts,
-                    provider: { data_collection: 'deny' }
-                })
+                    provider: { data_collection: 'deny' },
+                }),
+                signal: AbortSignal.timeout(25_000),
             });
 
             if (resp.status === 401 || resp.status === 402 || resp.status === 404) {
-                console.error('Embedding error status:', resp.status);
+                console.error('Embedding provider error status:', resp.status, resolvedModel.id);
                 return res.status(503).json({ error: 'Servizio embedding non disponibile' });
             }
 
-            if ([429, 503, 529].includes(resp.status)) {
+            if (RETRYABLE_STATUSES.has(resp.status)) {
                 attempts++;
                 if (attempts >= 3) {
-                    return res.status(502).json({ error: 'Embedding failed' });
+                    return res.status(502).json({ error: 'Servizio embedding temporaneamente occupato' });
                 }
-                await new Promise(r => setTimeout(r, [500, 1500, 4000][attempts - 1]));
+                await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempts - 1]));
                 continue;
             }
 
             if (!resp.ok) {
-                console.error('Embedding error status:', resp.status);
-                return res.status(502).json({ error: 'Embedding failed' });
+                console.error('Embedding error status:', resp.status, resolvedModel.id);
+                return res.status(502).json({ error: 'Generazione embedding fallita' });
             }
 
             responseData = await resp.json();
@@ -123,34 +132,41 @@ export const embedHandler = async (req: RequestLike, res: ResponseLike) => {
         } catch (error: any) {
             attempts++;
             if (attempts >= 3) {
-                console.error('Embedding error:', error?.message);
-                return res.status(502).json({ error: 'Embedding failed' });
+                console.error('Embedding network error:', error?.message);
+                return res.status(502).json({ error: 'Generazione embedding fallita' });
             }
-            await new Promise(r => setTimeout(r, [500, 1500, 4000][attempts - 1]));
+            await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempts - 1]));
         }
     }
 
     if (!responseData || !Array.isArray(responseData.data)) {
-        return res.status(502).json({ error: 'Embedding failed' });
+        return res.status(502).json({ error: 'Risposta embedding non valida' });
     }
 
     try {
         const vectors: number[][] = new Array(texts.length);
+        let actualDim = resolvedModel.dim;
+
         for (let i = 0; i < texts.length; i++) {
-            const item = responseData.data.find((d: any) => d.index === i) || responseData.data[i];
-            const vec = item?.embedding;
-            if (!vec || !Array.isArray(vec) || vec.length !== 1536) {
-                return res.status(502).json({ error: 'Dimensione embedding inattesa' });
+            const item = responseData.data.find((d: any) => d && d.index === i) || responseData.data[i];
+            const rawVec = item?.embedding;
+            if (actualDim === 0 && Array.isArray(rawVec) && rawVec.length > 0) {
+                actualDim = rawVec.length;
             }
-            const norm = Math.sqrt(vec.reduce((a: number, b: number) => a + b * b, 0));
-            if (norm === 0 || isNaN(norm)) {
-                return res.status(502).json({ error: 'Dimensione embedding inattesa' });
+            const normalized = normalizeL2Vector(rawVec, actualDim);
+            if (!normalized) {
+                return res.status(502).json({ error: 'Dimensione o valori embedding inattesi' });
             }
-            vectors[i] = vec.map((v: number) => v / norm);
+            vectors[i] = normalized;
         }
-        res.status(200).json({ vectors });
+
+        return res.status(200).json({
+            vectors,
+            model: resolvedModel.id,
+            dim: actualDim,
+        });
     } catch (error: any) {
         console.error('Embedding processing error:', error?.message);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        return res.status(500).json({ error: 'Errore interno durante elaborazione embedding' });
     }
 };

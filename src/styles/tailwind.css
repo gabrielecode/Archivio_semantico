@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-bg-primary: var(--bg-primary);
@@ -18,7 +19,7 @@
     --text-primary: #1A1A1A;
     --text-muted: #666666;
     --border-primary: #E5E5E5;
-    --accent: #3A6D5D; /* Desaturated emerald-800 */
+    --accent: #3A6D5D;
     --accent-hover: #2F574A;
     --card-bg: #FFFFFF;
   }
@@ -29,7 +30,7 @@
     --text-primary: #E0E0E0;
     --text-muted: #A0A0A0;
     --border-primary: #2D2D2D;
-    --accent: #528B7A; /* Desaturated emerald for dark mode */
+    --accent: #528B7A;
     --accent-hover: #63A692;
     --card-bg: #1E1E1E;
   }
