@@ -1,5 +1,6 @@
 import { Archive, Rec } from '../types';
 import { computeRecordCentroid, dotProduct } from './graph';
+import { extractWikiLinks, getRecordText, resolveRecord } from './parser';
 
 export type SuggestionSource = 'title' | 'fields' | 'text' | 'concepts' | 'similar' | 'links';
 
@@ -344,22 +345,28 @@ export function suggestTagsForRecord(
   const { rawText: rawFields, structuredExactTokens } = buildRecordCampiText(record.campi);
   const normFields = normalizeMtcText(rawFields);
 
-  const rawBody = [record.contenuto, record.fonte, ...(record.outlinks || [])].filter(Boolean).join(' ');
+  const rawBody = [getRecordText(record), record.fonte].filter(Boolean).join(' ');
   const normBody = normalizeMtcText(rawBody);
 
   const combinedNorm = `${normTitle} ${normFields} ${normBody}`.trim();
   const combinedWordSet = new Set(extractSignificantWords(combinedNorm));
 
   // Linked peer tag affinity (direct outlinks & backlinks)
+  const getResolvedLinkTitles = (rec: Rec): string[] =>
+    extractWikiLinks(getRecordText(rec)).map((link) => {
+      const resolved = resolveRecord(archive, link.targetTitle);
+      return resolved ? resolved.titolo : link.targetTitle;
+    });
+
   const linkedTagCounts = new Map<string, number>();
   const normSelfTitle = normalizeMtcText(record.titolo || '');
-  const outlinkSet = new Set((record.outlinks || []).map(normalizeMtcText).filter(Boolean));
+  const outlinkSet = new Set(getResolvedLinkTitles(record).map(normalizeMtcText).filter(Boolean));
   (archive.records || []).forEach((other) => {
     if (other.id === record.id) return;
     const otherNormTitle = normalizeMtcText(other.titolo || '');
     const isLinked =
       (otherNormTitle && outlinkSet.has(otherNormTitle)) ||
-      (normSelfTitle && (other.outlinks || []).some((o) => normalizeMtcText(o) === normSelfTitle));
+      (normSelfTitle && getResolvedLinkTitles(other).some((o) => normalizeMtcText(o) === normSelfTitle));
     if (!isLinked) return;
     getRecordTags(other).forEach((t) => {
       const k = normalizeMtcText(t);

@@ -115,7 +115,7 @@ export const summarizeHandler = async (req: RequestLike, res: ResponseLike) => {
                         { role: 'user', content: userPrompt },
                     ],
                 }),
-                signal: AbortSignal.timeout(30_000),
+                signal: AbortSignal.timeout(15_000),
             });
 
             if (resp.status === 401 || resp.status === 402 || resp.status === 404) {

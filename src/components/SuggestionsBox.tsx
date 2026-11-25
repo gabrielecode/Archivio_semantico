@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {Archive, Rec} from '../types';
-import {extractWikiLinks, findRecordByTitle, getBacklinks} from '../utils/parser';
+import {extractWikiLinks, getBacklinks, getRecordText, resolveRecord} from '../utils/parser';
 import {Lightbulb, Plus, FileText, ArrowRight} from 'lucide-react';
 import {Button, ConfirmDialog} from './ui';
 
@@ -19,14 +19,13 @@ export function SuggestionsBox({archive, onOpenRec, updateArchive, t}: Suggestio
         const ghostMap = new Map<string, { title: string; count: number; sources: Set<string> }>();
         
         archive.records.forEach(sourceRec => {
-            const wikiLinks = extractWikiLinks(sourceRec.contenuto);
-            const outlinks = sourceRec.outlinks || [];
-            const allTitles = new Set([...wikiLinks.map(w => w.targetTitle), ...outlinks]);
+            const wikiLinks = extractWikiLinks(getRecordText(sourceRec));
+            const allTitles = new Set(wikiLinks.map(w => w.targetTitle));
 
             allTitles.forEach(targetTitle => {
                 const cleanTitle = targetTitle.trim();
                 if (!cleanTitle) return;
-                const targetRec = findRecordByTitle(archive, cleanTitle);
+                const targetRec = resolveRecord(archive, cleanTitle);
                 if (!targetRec && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
                     const key = cleanTitle.toLowerCase();
                     if (!ghostMap.has(key)) {

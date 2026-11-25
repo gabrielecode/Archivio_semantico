@@ -16,6 +16,24 @@ export interface EmbedRecordsOptions {
   expectedDim?: number;
 }
 
+function waitWithSignal(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.reject(new Error('Annullato'));
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      reject(new Error('Annullato'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 export async function embedRecords(
   recs: Rec[],
   onProgress: (doneRecs: number, totalRecs: number) => void,
@@ -64,12 +82,28 @@ export async function embedRecords(
       if (signal.aborted) throw new Error('Annullato');
 
       const batch = queue.slice(i, i + 20);
-      const resp = await fetchEmbeddings(
-        batch.map((b) => b.chunk.testo),
-        'document',
-        signal,
-        opts.model
-      );
+      let resp: Awaited<ReturnType<typeof fetchEmbeddings>>;
+      let retries = 0;
+      while (true) {
+        if (signal.aborted) throw new Error('Annullato');
+        try {
+          resp = await fetchEmbeddings(
+            batch.map((b) => b.chunk.testo),
+            'document',
+            signal,
+            opts.model
+          );
+          break;
+        } catch (err: any) {
+          const msg = String(err?.message || '');
+          const isRateLimit = msg.includes('Troppe richieste') || msg.includes('429');
+          if (!isRateLimit || retries >= 3) {
+            throw err;
+          }
+          retries++;
+          await waitWithSignal(20_000, signal);
+        }
+      }
       actualModel = resp.model;
       actualDim = resp.dim;
 

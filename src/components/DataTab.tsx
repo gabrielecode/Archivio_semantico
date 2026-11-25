@@ -120,7 +120,11 @@ export function DataTab({
   }, [selectedId, archive.records, blankRecord, draft, setSelectedId]);
 
   const handleSave = useCallback(() => {
-    if (!draft || !draft.titolo.trim()) return;
+    if (!draft) return;
+    if (!draft.titolo.trim()) {
+      onToast?.('Inserisci un titolo per salvare');
+      return;
+    }
     const now = new Date().toISOString();
     const withOutlinks = updateRecordOutlinks(draft);
     const updated = { ...withOutlinks, tag: withOutlinks.tags, modificato: now };
@@ -412,24 +416,10 @@ export function DataTab({
       message: 'Eliminare questa scheda? Non si può annullare.',
       onConfirm: () => {
         const remaining = archive.records.filter((r) => r.id !== idToDelete);
-        setArchive((a) => {
-          const deleted = a.records.find((r) => r.id === idToDelete);
-          const deletedTitle = (deleted?.titolo || '').trim().toLowerCase();
-          return {
-            ...a,
-            records: a.records
-              .filter((r) => r.id !== idToDelete)
-              .map((r) => {
-                if (!deletedTitle || !r.outlinks?.some((o) => o.trim().toLowerCase() === deletedTitle)) {
-                  return r;
-                }
-                return {
-                  ...r,
-                  outlinks: r.outlinks.filter((o) => o.trim().toLowerCase() !== deletedTitle),
-                };
-              }),
-          };
-        });
+        setArchive((a) => ({
+          ...a,
+          records: a.records.filter((r) => r.id !== idToDelete),
+        }));
         setDirty(true);
         setConfirmDialog(null);
         if (idToDelete === selectedId) {
@@ -621,6 +611,7 @@ export function DataTab({
                     lastLoadedIdRef.current = null;
                     setSelectedId(id);
                   }}
+                  onCreateRecord={(title) => handleCreateRecordFromWiki(title)}
                 />
                 <div className="flex justify-center">
                   <Button

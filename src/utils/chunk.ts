@@ -10,7 +10,7 @@ function djb2(str: string): string {
 
 export function calculateEmbHash(rec: Rec): string {
     const fields = Object.entries(rec.campi).sort().map(([k, v]) => `${k}:${v}`).join('|');
-    const source = `${rec.titolo}|${rec.tipo}|${[...rec.tags].sort().join(',')}|${fields}|${rec.contenuto}`;
+    const source = `v2|${rec.titolo}|${rec.tipo}|${[...rec.tags].sort().join(',')}|${fields}|${rec.contenuto}`;
     return djb2(source);
 }
 
@@ -46,75 +46,82 @@ export function buildHeader(rec: Rec): string {
     return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}${contentPart}`.substring(0, 1200);
 }
 
+function buildFieldChunks(rec: Rec, includeEmptyFallback: boolean): { testo: string; embedding: number[] }[] {
+    const prefix = `${rec.titolo} (${rec.tipo})`;
+    const entries: string[] = [];
+    if ((rec.tags || []).length > 0) {
+        entries.push(`tag: ${rec.tags.join(', ')}`);
+    }
+    for (const [key, value] of Object.entries(rec.campi || {})) {
+        if (!value || isMediaOrLinkKey(key)) continue;
+        const raw = Array.isArray(value)
+            ? value.filter(v => !!v).join('; ')
+            : String(value);
+        const trimmed = raw.trim();
+        if (trimmed) {
+            entries.push(`${key}: ${trimmed}`);
+        }
+    }
+
+    const fieldChunks: { testo: string; embedding: number[] }[] = [];
+    if (entries.length === 0) {
+        if (includeEmptyFallback) {
+            fieldChunks.push({ testo: prefix.substring(0, 1500), embedding: [] });
+        }
+        return fieldChunks;
+    }
+
+    const MAX_CHUNK_LEN = 1500;
+    const maxBodyLen = Math.max(200, MAX_CHUNK_LEN - prefix.length - 3);
+    let currentBody = '';
+
+    const flushBody = () => {
+        if (!currentBody) return;
+        fieldChunks.push({
+            testo: `${prefix} | ${currentBody}`.substring(0, MAX_CHUNK_LEN),
+            embedding: [],
+        });
+        currentBody = '';
+    };
+
+    for (const entry of entries) {
+        if (entry.length > maxBodyLen) {
+            flushBody();
+            let remaining = entry;
+            while (remaining.length > maxBodyLen) {
+                let cut = remaining.lastIndexOf(' ', maxBodyLen);
+                if (cut < Math.floor(maxBodyLen * 0.5)) cut = maxBodyLen;
+                fieldChunks.push({
+                    testo: `${prefix} | ${remaining.substring(0, cut).trimEnd()}`.substring(0, MAX_CHUNK_LEN),
+                    embedding: [],
+                });
+                remaining = remaining.substring(cut).trimStart();
+            }
+            if (remaining) {
+                currentBody = remaining;
+            }
+        } else if (!currentBody) {
+            currentBody = entry;
+        } else if (currentBody.length + 3 + entry.length <= maxBodyLen) {
+            currentBody += ` | ${entry}`;
+        } else {
+            flushBody();
+            currentBody = entry;
+        }
+    }
+    flushBody();
+    return fieldChunks;
+}
+
 export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] {
     const content = (rec.contenuto || '').replace(/\r\n/g, '\n');
     const header = buildHeader(rec);
 
     const paragraphs = content.split('\n\n').map(p => p.trim()).filter(p => p !== '');
     const chunks: { testo: string; embedding: number[] }[] = [];
-    
+
     if (paragraphs.length === 0) {
-        const prefix = `${rec.titolo} (${rec.tipo})`;
-        const entries: string[] = [];
-        if ((rec.tags || []).length > 0) {
-            entries.push(`tag: ${rec.tags.join(', ')}`);
-        }
-        for (const [key, value] of Object.entries(rec.campi || {})) {
-            if (!value || isMediaOrLinkKey(key)) continue;
-            const raw = Array.isArray(value)
-                ? value.filter(v => !!v).join('; ')
-                : String(value);
-            const trimmed = raw.trim();
-            if (trimmed) {
-                entries.push(`${key}: ${trimmed}`);
-            }
-        }
-
-        if (entries.length === 0) {
-            chunks.push({ testo: prefix.substring(0, 1500), embedding: [] });
-            return chunks;
-        }
-
-        const MAX_CHUNK_LEN = 1500;
-        const maxBodyLen = Math.max(200, MAX_CHUNK_LEN - prefix.length - 3);
-        let currentBody = '';
-
-        const flushBody = () => {
-            if (!currentBody) return;
-            chunks.push({
-                testo: `${prefix} | ${currentBody}`.substring(0, MAX_CHUNK_LEN),
-                embedding: [],
-            });
-            currentBody = '';
-        };
-
-        for (const entry of entries) {
-            if (entry.length > maxBodyLen) {
-                flushBody();
-                let remaining = entry;
-                while (remaining.length > maxBodyLen) {
-                    let cut = remaining.lastIndexOf(' ', maxBodyLen);
-                    if (cut < Math.floor(maxBodyLen * 0.5)) cut = maxBodyLen;
-                    chunks.push({
-                        testo: `${prefix} | ${remaining.substring(0, cut).trimEnd()}`.substring(0, MAX_CHUNK_LEN),
-                        embedding: [],
-                    });
-                    remaining = remaining.substring(cut).trimStart();
-                }
-                if (remaining) {
-                    currentBody = remaining;
-                }
-            } else if (!currentBody) {
-                currentBody = entry;
-            } else if (currentBody.length + 3 + entry.length <= maxBodyLen) {
-                currentBody += ` | ${entry}`;
-            } else {
-                flushBody();
-                currentBody = entry;
-            }
-        }
-        flushBody();
-        return chunks;
+        return buildFieldChunks(rec, true);
     }
 
     let currentText = '';
@@ -143,6 +150,8 @@ export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] 
         }
     }
     if (currentText) addChunk(currentText);
+
+    chunks.push(...buildFieldChunks(rec, false));
 
     return chunks;
 }
