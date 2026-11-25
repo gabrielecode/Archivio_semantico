@@ -320,3 +320,79 @@ export function shortestPath(archive: Archive, startId: string, endId: string): 
 
     return pathIds.map(id => titleToRec.get(id)).filter(Boolean) as Rec[];
 }
+
+export function renameLinks(archive: Archive, oldTitle: string, newTitle: string): Archive {
+    const oldNorm = normTitle(oldTitle);
+    const trimmedNew = (newTitle || '').trim();
+    if (!oldNorm || !trimmedNew || oldTitle.trim() === trimmedNew) {
+        return archive;
+    }
+
+    const replaceInText = (text: string): string => {
+        if (!text || !text.includes('[[')) return text;
+        return text.replace(/\[\[([^\]|]+)(\|[^\]]*)?\]\]/g, (match, target, rest) => {
+            if (normTitle(target) !== oldNorm) return match;
+            return `[[${trimmedNew}${rest || ''}]]`;
+        });
+    };
+
+    const records = archive.records.map(rec => {
+        const nextContenuto = typeof rec.contenuto === 'string' ? replaceInText(rec.contenuto) : rec.contenuto;
+        let nextCampi = rec.campi;
+        if (rec.campi && typeof rec.campi === 'object') {
+            let campiChanged = false;
+            const updatedCampi: Record<string, any> = { ...rec.campi };
+            for (const [key, val] of Object.entries(rec.campi)) {
+                const lowerKey = key.toLowerCase();
+                if (
+                    lowerKey.includes('immagine') ||
+                    lowerKey.includes('image') ||
+                    lowerKey.includes('video') ||
+                    lowerKey.includes('link')
+                ) {
+                    continue;
+                }
+                if (typeof val === 'string') {
+                    const replaced = replaceInText(val);
+                    if (replaced !== val) {
+                        updatedCampi[key] = replaced;
+                        campiChanged = true;
+                    }
+                } else if (Array.isArray(val)) {
+                    let arrChanged = false;
+                    const nextArr = val.map(item => {
+                        if (typeof item === 'string') {
+                            const replaced = replaceInText(item);
+                            if (replaced !== item) {
+                                arrChanged = true;
+                                return replaced;
+                            }
+                        }
+                        return item;
+                    });
+                    if (arrChanged) {
+                        updatedCampi[key] = nextArr;
+                        campiChanged = true;
+                    }
+                }
+            }
+            if (campiChanged) {
+                nextCampi = updatedCampi;
+            }
+        }
+
+        if (nextContenuto === rec.contenuto && nextCampi === rec.campi) {
+            return rec;
+        }
+        return {
+            ...rec,
+            contenuto: nextContenuto,
+            campi: nextCampi,
+        };
+    });
+
+    return {
+        ...archive,
+        records,
+    };
+}

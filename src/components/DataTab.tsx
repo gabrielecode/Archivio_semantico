@@ -3,7 +3,7 @@ import { Archive, Rec, Template } from '../types';
 import { Button, EmptyState } from './ui';
 import { ChevronLeft, Save, Trash2, Table as TableIcon, FileText, ChevronRight } from 'lucide-react';
 import { useTranslation } from '../utils/i18n';
-import { updateRecordOutlinks } from '../utils/parser';
+import { updateRecordOutlinks, renameLinks } from '../utils/parser';
 import { cleanArchive } from '../utils/archive';
 import { WikiContent } from './WikiContent';
 import { LinkPanel } from './LinkPanel';
@@ -45,6 +45,7 @@ export function DataTab({
   const [formDirty, setFormDirty] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const lastLoadedIdRef = useRef<string | null>(null);
+  const originalTitleRef = useRef<string>('');
 
   const filteredRecords = useMemo(() => {
     const recs = [...archive.records].filter(
@@ -104,6 +105,7 @@ export function DataTab({
       if (!draft) {
         const newRec = blankRecord();
         lastLoadedIdRef.current = newRec.id;
+        originalTitleRef.current = '';
         setDraft(newRec);
         setIsNew(true);
         setSelectedId(newRec.id);
@@ -114,6 +116,7 @@ export function DataTab({
     const rec = archive.records.find((r) => r.id === selectedId);
     if (rec && (lastLoadedIdRef.current !== selectedId || !draft)) {
       lastLoadedIdRef.current = selectedId;
+      originalTitleRef.current = rec.titolo || '';
       setDraft({ ...rec });
       setIsNew(false);
     }
@@ -128,17 +131,28 @@ export function DataTab({
     const now = new Date().toISOString();
     const withOutlinks = updateRecordOutlinks(draft);
     const updated = { ...withOutlinks, tag: withOutlinks.tags, modificato: now };
+    const oldTitle = originalTitleRef.current.trim();
+    const newTitle = updated.titolo.trim();
+    const titleChanged = Boolean(!isNew && oldTitle && newTitle && oldTitle !== newTitle);
+
     if (isNew) {
       setArchive((a) => ({ ...a, records: [...a.records, updated] }));
     } else {
-      setArchive((a) => ({ ...a, records: a.records.map((r) => (r.id === updated.id ? updated : r)) }));
+      setArchive((a) => {
+        const nextArchive = {
+          ...a,
+          records: a.records.map((r) => (r.id === updated.id ? updated : r)),
+        };
+        return titleChanged ? renameLinks(nextArchive, oldTitle, newTitle) : nextArchive;
+      });
     }
     lastLoadedIdRef.current = updated.id;
+    originalTitleRef.current = newTitle;
     setDraft(updated);
     setIsNew(false);
     setEditing(false);
     setDirty(true);
-    onToast?.('Scheda salvata');
+    onToast?.(titleChanged ? 'Link aggiornati nelle altre schede' : 'Scheda salvata');
     window.scrollTo({ top: 0 });
   }, [draft, isNew, setArchive, setDirty, onToast]);
 
@@ -180,6 +194,7 @@ export function DataTab({
       confirmLabel: 'Apri',
       onConfirm: () => {
         lastLoadedIdRef.current = existing.id;
+        originalTitleRef.current = existing.titolo || '';
         setDraft({ ...existing });
         setSelectedId(existing.id);
         setEditing(false);
@@ -216,23 +231,29 @@ export function DataTab({
     };
 
     const withOutlinks = updateRecordOutlinks(updated);
+    const oldTitle = originalTitleRef.current.trim();
+    const newTitle = withOutlinks.titolo.trim();
+    const titleChanged = Boolean(oldTitle && newTitle && oldTitle !== newTitle);
+
     setArchive((a) => {
       const exists = a.records.some((r) => r.id === withOutlinks.id);
-      return {
+      const nextArchive = {
         ...a,
         records: exists
           ? a.records.map((r) => (r.id === updated.id ? withOutlinks : r))
           : [...a.records, withOutlinks],
       };
+      return titleChanged ? renameLinks(nextArchive, oldTitle, newTitle) : nextArchive;
     });
 
     lastLoadedIdRef.current = withOutlinks.id;
+    originalTitleRef.current = newTitle;
     setDraft(withOutlinks);
     setIsNew(false);
     setFormDirty(false);
     setEditing(false);
     setDirty(true);
-    onToast?.('Scheda salvata');
+    onToast?.(titleChanged ? 'Link aggiornati nelle altre schede' : 'Scheda salvata');
     window.scrollTo({ top: 0 });
   };
 
@@ -310,6 +331,7 @@ export function DataTab({
     setArchive((a) => ({ ...a, records: [...a.records, newRec] }));
     setDirty(true);
     lastLoadedIdRef.current = newRec.id;
+    originalTitleRef.current = newRec.titolo || '';
     setDraft(newRec);
     setSelectedId(newRec.id);
   };
@@ -317,6 +339,7 @@ export function DataTab({
   const createNew = useCallback(() => {
     const newRec = blankRecord();
     lastLoadedIdRef.current = newRec.id;
+    originalTitleRef.current = '';
     setDraft(newRec);
     setIsNew(true);
     setSelectedId(newRec.id);
@@ -706,6 +729,7 @@ export function DataTab({
           }}
           onEditRecord={(rec) => {
             lastLoadedIdRef.current = rec.id;
+            originalTitleRef.current = rec.titolo || '';
             setSelectedId(rec.id);
             setDraft({ ...rec });
             setIsNew(false);
