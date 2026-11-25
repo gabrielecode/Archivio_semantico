@@ -1,0 +1,1803 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manuale Semplice — Archivio Semantico</title>
+  <meta name="description" content="Guida passo dopo passo in linguaggio semplice per usare Archivio Semantico, con immagini dei pulsanti e stampa pulita in PDF." />
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --paper: #ffffff;
+      --ink: #1c1917;
+      --ink-soft: #57534e;
+      --border: #e2dfd7;
+      --accent: #3a6d5d;
+      --accent-dark: #2a5245;
+      --accent-soft: #ecf5f1;
+      --emerald: #047857;
+      --emerald-soft: #ecfdf5;
+      --click-red: #dc2626;
+      --click-red-bg: rgba(220, 38, 38, 0.08);
+      --amber-soft: #fffbeb;
+      --amber-border: #fcd34d;
+      --amber-ink: #92400e;
+      --mcc-blue: #1976d2;
+      --mtc-dark: #212121;
+      --diet-yellow: #eab308;
+      --fito-green: #2e7d32;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Barra superiore fissa (nascosta in stampa) */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+    }
+
+    .topbar-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent-dark);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      transition: background 0.15s;
+    }
+
+    .back-link:hover {
+      background: var(--bg);
+    }
+
+    .topbar-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--ink);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .print-hint {
+      font-size: 13px;
+      color: var(--ink-soft);
+      max-width: 280px;
+      line-height: 1.35;
+    }
+
+    .btn-print {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(58, 109, 93, 0.25);
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-print:hover {
+      background: var(--accent-dark);
+    }
+
+    .btn-print:active {
+      transform: scale(0.98);
+    }
+
+    /* Contenitore principale */
+    .page {
+      max-width: 960px;
+      margin: 28px auto 64px;
+      padding: 0 18px;
+    }
+
+    .cover-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 34px;
+      margin-bottom: 26px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+    }
+
+    .brand-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-name {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--accent-dark);
+    }
+
+    h1 {
+      font-size: 32px;
+      line-height: 1.22;
+      color: var(--ink);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .lead {
+      font-size: 18px;
+      color: var(--ink-soft);
+      margin-bottom: 22px;
+      max-width: 65ch;
+    }
+
+    /* Legenda riquadro rosso */
+    .legend-red {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #fef2f2;
+      border: 1.5px solid #fecaca;
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-top: 12px;
+    }
+
+    .legend-sample {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9px;
+      background: #fff;
+      border: 3px solid var(--click-red);
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+      position: relative;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+    }
+
+    .legend-text {
+      font-size: 15px;
+      color: #7f1d1d;
+    }
+
+    /* Indice rapido */
+    .toc {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 26px 30px;
+      margin-bottom: 28px;
+    }
+
+    .toc h2 {
+      font-size: 20px;
+      margin-bottom: 14px;
+      color: var(--ink);
+    }
+
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px 18px;
+      list-style: none;
+    }
+
+    .toc-grid a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 600;
+      font-size: 15.5px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+
+    .toc-grid a:hover {
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+    }
+
+    .toc-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      font-weight: 700;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Capitoli del manuale */
+    .chapter {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px 32px;
+      margin-bottom: 26px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .chapter-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .chapter-num {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .chapter-head h2 {
+      font-size: 23px;
+      line-height: 1.25;
+      color: var(--ink);
+    }
+
+    .chapter-intro {
+      color: var(--ink-soft);
+      margin-bottom: 20px;
+      font-size: 16.5px;
+    }
+
+    /* Lista passi numerati semplicissima */
+    .steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 16.5px;
+    }
+
+    .step-badge {
+      min-width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: var(--click-red);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13.5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .step-badge.neutral {
+      background: var(--accent);
+    }
+
+    .btn-mention {
+      display: inline-block;
+      background: #f3f2ee;
+      border: 1px solid #d6d3cb;
+      border-radius: 6px;
+      padding: 0 7px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--ink);
+    }
+
+    /* Riquadro consiglio */
+    .tip-box {
+      background: var(--amber-soft);
+      border: 1px solid var(--amber-border);
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin-top: 16px;
+      font-size: 15.5px;
+      color: #78350f;
+    }
+
+    .tip-box strong {
+      color: #451a03;
+    }
+
+    .safe-box {
+      background: var(--emerald-soft);
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin-top: 16px;
+      font-size: 15.5px;
+      color: #064e3b;
+    }
+
+    /* ============================================================
+       MINIATURE GRAFICHE DELL'APP + RIQUADRO ROSSO DI CLICK
+       ============================================================ */
+    .mockup-wrap {
+      margin: 18px 0 8px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .mockup-caption {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mockup-screen {
+      background: #f8f8f8;
+      border: 1.5px solid #d4d4d0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+      font-size: 13px;
+      color: #1a1a1a;
+      user-select: none;
+    }
+
+    /* Finta barra finestra */
+    .win-dots {
+      background: #ecebe7;
+      border-bottom: 1px solid #dcdad2;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #78716c;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.r { background: #f87171; }
+    .dot.y { background: #fbbf24; }
+    .dot.g { background: #34d399; }
+
+    /* Evidenziatore ROSSO di click */
+    .click-target {
+      position: relative;
+      outline: 3px solid var(--click-red);
+      outline-offset: 2px;
+      border-radius: 10px;
+      box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.16);
+      z-index: 2;
+    }
+
+    .click-num {
+      position: absolute;
+      top: -11px;
+      right: -11px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--click-red);
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+      z-index: 5;
+    }
+
+    .click-tag {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--click-red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 5;
+    }
+
+    /* Componenti realistici dell'app */
+    .app-header-bar {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #1a1a1a;
+    }
+
+    .app-leaf-box {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #3a6d5d;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .app-leaf-soft {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #d1fae5;
+      color: #047857;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .app-tabs-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #f3f3f3;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 3px;
+    }
+
+    .app-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666666;
+    }
+
+    .app-tab.active {
+      background: #ffffff;
+      color: #3a6d5d;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .app-right-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #666666;
+      font-weight: 600;
+    }
+
+    .ghost-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      color: #555;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: transparent;
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 3px 2px 9px;
+      background: #f3f3f3;
+      border: 1px solid #e5e5e5;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #555;
+    }
+
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      color: #3a6d5d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .status-subbar {
+      background: #f3f3f3;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 4px 14px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .embed-bar-mock {
+      background: #ecfdf5;
+      border-bottom: 1px solid #a7f3d0;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    .btn-app-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #3a6d5d;
+      color: #fff;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 9px;
+    }
+
+    .btn-app-emerald {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #047857;
+      color: #fff;
+      font-weight: 600;
+      font-size: 12.5px;
+      padding: 7px 14px;
+      border-radius: 10px;
+    }
+
+    .btn-app-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #ffffff;
+      color: #1c1917;
+      border: 1px solid #d6d3d1;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 9px;
+    }
+
+    .btn-app-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #dc2626;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 9px;
+      background: #fef2f2;
+    }
+
+    .mock-body {
+      padding: 16px;
+    }
+
+    .mock-modal {
+      background: #ffffff;
+      border: 1px solid #e5e5e5;
+      border-radius: 18px;
+      padding: 16px;
+      max-width: 390px;
+      margin: 0 auto;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .mock-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ecebe7;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 14.5px;
+    }
+
+    .mock-input {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #d6d3d1;
+      border-radius: 9px;
+      padding: 7px 11px;
+      font-size: 12.5px;
+      color: #44403c;
+    }
+
+    .mock-dropdown-menu {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 16px;
+      width: 240px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .mock-menu-head {
+      background: #f5f5f4;
+      padding: 10px 14px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .mock-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #292524;
+      border-radius: 8px;
+      margin: 3px 6px;
+    }
+
+    /* Griglia tipologie */
+    .tpl-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .tpl-card {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: #fff;
+      border: 1px solid #e7e5e4;
+      border-radius: 12px;
+      padding: 9px;
+    }
+
+    .tpl-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Scheda aperta 2 colonne */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .card-preview-mock {
+      background: #fff;
+      border: 1px solid #e7e5e4;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-preview-top {
+      background: var(--mcc-blue);
+      color: #fff;
+      padding: 12px 14px;
+    }
+
+    .card-preview-body {
+      padding: 12px 14px;
+      font-size: 12px;
+      space-y: 8px;
+    }
+
+    .wiki-box-mock {
+      background: #fff;
+      border: 1px solid #e7e5e4;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .wiki-link-chip {
+      display: inline-block;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #b45309;
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-weight: 600;
+      font-size: 11.5px;
+    }
+
+    /* Grafo stilizzato */
+    .graph-canvas-mock {
+      background: #f8f7f4;
+      background-image: radial-gradient(#d6d3cb 1px, transparent 1px);
+      background-size: 18px 18px;
+      border: 1px solid #e7e5e4;
+      border-radius: 14px;
+      height: 220px;
+      position: relative;
+      overflow: hidden;
+      padding: 12px;
+    }
+
+    .graph-side-drawer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      bottom: 10px;
+      width: 195px;
+      background: rgba(255, 255, 255, 0.97);
+      border: 1px solid #d6d3d1;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    }
+
+    /* FAQ */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      background: #fafaf8;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 4px;
+      font-size: 16.5px;
+    }
+
+    .faq-a {
+      color: var(--ink-soft);
+      font-size: 15.5px;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 14px;
+      color: var(--ink-soft);
+      padding: 20px 0 10px;
+    }
+
+    /* Responsive mobile */
+    @media (max-width: 680px) {
+      .cover-card, .chapter, .toc {
+        padding: 22px 18px;
+      }
+      h1 {
+        font-size: 25px;
+      }
+      .two-col, .tpl-grid {
+        grid-template-columns: 1fr;
+      }
+      .print-hint {
+        display: none;
+      }
+      .graph-side-drawer {
+        width: 155px;
+      }
+    }
+
+    /* ============================================================
+       STAMPA PULITA / SALVA COME PDF
+       ============================================================ */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 13mm 13mm 15mm 13mm;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body {
+        background: #ffffff !important;
+        font-size: 11pt;
+        line-height: 1.5;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .page {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .cover-card, .toc, .chapter {
+        box-shadow: none !important;
+        border: 1px solid #d6d3d1;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 16px;
+      }
+
+      .chapter-head, .steps li, .tip-box, .safe-box, .faq-item, .mockup-wrap, .legend-red {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .mockup-screen {
+        box-shadow: none !important;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      h1 { font-size: 20pt; }
+      .chapter-head h2 { font-size: 14.5pt; }
+      .lead { font-size: 11.5pt; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA SUPERIORE CON TASTO STAMPA / PDF -->
+  <header class="topbar no-print">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <a href="/" class="back-link" title="Torna all'applicazione">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          Torna all'app
+        </a>
+        <span class="topbar-title">Manuale d'uso facile</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="print-hint">Per creare un file PDF, clicca il pulsante e scegli <strong>Salva come PDF</strong>.</span>
+        <button type="button" class="btn-print" onclick="window.print()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Stampa / Salva come PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- COPERTINA -->
+    <section class="cover-card">
+      <div class="brand-row">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+        </div>
+        <span class="brand-name">Archivio Semantico · Medicina Tradizionale Cinese</span>
+      </div>
+
+      <h1>Manuale semplice per usare l'app</h1>
+      <p class="lead">
+        Questo programma è il tuo schedario personale sul computer o sul telefono.
+        Ti aiuta a scrivere le tue schede e a ritrovarle subito, anche se non ricordi le parole esatte.
+      </p>
+
+      <div class="legend-red">
+        <span class="legend-sample">
+          Pulsante
+          <span class="click-num" style="position:static; width:19px; height:19px; font-size:11px; border:none;">1</span>
+        </span>
+        <div class="legend-text">
+          <strong>Come leggere le figure:</strong> quando vedi un <strong>riquadro rosso</strong> intorno a un tasto, è proprio lì che devi cliccare con il tasto sinistro del mouse (o toccare con il dito sul telefono).
+        </div>
+      </div>
+    </section>
+
+    <!-- INDICE -->
+    <nav class="toc" aria-label="Indice del manuale">
+      <h2>Cosa trovi in questo manuale</h2>
+      <ol class="toc-grid">
+        <li><a href="#cap-1"><span class="toc-num">1</span> Entrare nel programma</a></li>
+        <li><a href="#cap-2"><span class="toc-num">2</span> Capire la schermata principale</a></li>
+        <li><a href="#cap-3"><span class="toc-num">3</span> Ingrandire le scritte e cambiare colori</a></li>
+        <li><a href="#cap-4"><span class="toc-num">4</span> Scrivere una nuova scheda</a></li>
+        <li><a href="#cap-5"><span class="toc-num">5</span> Ascoltare la pronuncia e leggere le schede</a></li>
+        <li><a href="#cap-6"><span class="toc-num">6</span> Cercare tra le tue schede</a></li>
+        <li><a href="#cap-7"><span class="toc-num">7</span> Vedere la mappa dei collegamenti (Grafico)</a></li>
+        <li><a href="#cap-8"><span class="toc-num">8</span> Mettere al sicuro le schede (Copia di riserva)</a></li>
+        <li><a href="#cap-9"><span class="toc-num">9</span> Aggiungere nuovi tipi di schede</a></li>
+        <li><a href="#cap-10"><span class="toc-num">10</span> Piccoli problemi e risposte veloci</a></li>
+      </ol>
+    </nav>
+
+    <!-- CAPITOLO 1 -->
+    <section class="chapter" id="cap-1">
+      <div class="chapter-head">
+        <div class="chapter-num">1</div>
+        <h2>Entrare nel programma</h2>
+      </div>
+      <p class="chapter-intro">
+        Non devi installare nulla. Appena apri il sito dell'app, vedi la pagina di benvenuto.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>Clicca sul pulsante verde <span class="btn-mention">Accedi</span> in alto a destra, oppure sul pulsante <span class="btn-mention">Accedi o Registrati</span>.</span></li>
+        <li><span class="step-badge">2</span><span>Si apre una finestra al centro. Il modo più facile per entrare è cliccare su <span class="btn-mention">Continua con Google</span> e scegliere il tuo indirizzo Gmail.</span></li>
+        <li><span class="step-badge neutral">3</span><span>Se preferisci non usare Google, scrivi la tua email e la tua password nei due spazi bianchi e clicca su <span class="btn-mention">Accedi</span>.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 1 — La prima pagina e la finestra per entrare</div>
+        <div class="mockup-screen">
+          <div class="win-dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span> <span>Archivio Semantico</span></div>
+          <!-- Header pagina iniziale -->
+          <div class="app-header-bar" style="background:#fff;">
+            <div class="app-logo">
+              <div class="app-leaf-soft">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              </div>
+              <div>
+                <div style="font-family:Georgia,serif; font-weight:700; font-size:13px;">Archivio Semantico</div>
+                <div style="font-size:10px; color:#065f46; font-weight:700;">Medicina Tradizionale Cinese</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; font-size:12px;">
+              <span style="color:#57534e;">Come funziona</span>
+              <span style="color:#57534e;">Istruzioni</span>
+              <span style="border:1px solid #d6d3d1; padding:3px 7px; border-radius:6px; font-weight:700; font-size:11px;">IT</span>
+              <span class="btn-app-emerald click-target" style="padding:6px 14px;">
+                Accedi
+                <span class="click-num">1</span>
+              </span>
+            </div>
+          </div>
+          <!-- Corpo: finestra di accesso -->
+          <div class="mock-body" style="background:#fafaf9; display:grid; grid-template-columns:1.1fr 1fr; gap:16px; align-items:center;">
+            <div style="padding:6px;">
+              <div style="font-family:Georgia,serif; font-size:20px; font-weight:700; line-height:1.2; margin-bottom:8px;">Ritrova subito quello che hai scritto</div>
+              <div style="font-size:12px; color:#57534e; margin-bottom:14px;">Il tuo schedario di Medicina Tradizionale Cinese, con una ricerca intelligente.</div>
+              <div class="btn-app-emerald click-target" style="display:inline-flex;">
+                Accedi o Registrati →
+                <span class="click-num">1</span>
+              </div>
+            </div>
+            <div class="mock-modal" style="margin:0;">
+              <div class="mock-modal-head">
+                <span>Accedi al tuo account</span>
+                <span style="color:#a8a29e;">✕</span>
+              </div>
+              <div class="btn-app-secondary click-target" style="width:100%; padding:8px 12px; margin-bottom:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                Continua con Google
+                <span class="click-num">2</span>
+              </div>
+              <div style="text-align:center; font-size:11px; color:#78716c; margin-bottom:8px;">── oppure con email ──</div>
+              <div class="mock-input" style="margin-bottom:6px; color:#a8a29e;">nome@esempio.it</div>
+              <div class="mock-input" style="margin-bottom:10px; color:#a8a29e;">••••••••</div>
+              <div class="btn-app-emerald" style="width:100%;">Accedi</div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:8px;">
+                <span style="color:#047857; font-weight:600;">Crea un account</span>
+                <span style="color:#78716c;">Password dimenticata?</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <strong>Prima volta con email e password?</strong> Clicca su <em>Crea un account</em>, scegli una password lunga almeno 8 caratteri, poi apri la tua casella di posta e clicca sul link ricevuto per confermare.
+      </div>
+    </section>
+
+    <!-- CAPITOLO 2 -->
+    <section class="chapter" id="cap-2">
+      <div class="chapter-head">
+        <div class="chapter-num">2</div>
+        <h2>Capire la schermata principale</h2>
+      </div>
+      <p class="chapter-intro">
+        Una volta entrato, in cima allo schermo trovi sempre la stessa barra con i 4 pulsanti principali e la fascia verde chiara.
+      </p>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 2 — La barra in alto per muoverti nell'app</div>
+        <div class="mockup-screen">
+          <div class="app-header-bar">
+            <div class="app-logo">
+              <div class="app-leaf-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              </div>
+              <span>Il mio archivio</span>
+            </div>
+
+            <div class="app-tabs-pill click-target" style="padding:4px;">
+              <span class="app-tab active">🔍 Ricerca</span>
+              <span class="app-tab">🗂 Schede (12)</span>
+              <span class="app-tab">🕸 Grafico</span>
+              <span class="app-tab">⚙ Campi</span>
+              <span class="click-num">1</span>
+            </div>
+
+            <div class="app-right-tools">
+              <span class="ghost-btn">🌙</span>
+              <span class="ghost-btn">Archivi</span>
+              <span class="ghost-btn">? Istruzioni</span>
+              <div class="user-chip click-target">
+                <span>Maria</span>
+                <div class="user-avatar">M</div>
+                <span class="click-num">2</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-subbar">
+            <span style="color:#3a6d5d; font-weight:700;">Salvato in locale 10:30</span>
+            <span>25/11/2026, 10:30:12</span>
+          </div>
+
+          <div class="embed-bar-mock">
+            <span style="font-weight:600; color:#065f46;">3 schede da preparare</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11px; color:#57534e;">Modello: <span style="background:#fff; border:1px solid #d6d3d1; padding:2px 6px; border-radius:6px;">Qwen 3 ▼</span></span>
+              <span class="btn-app-primary click-target">
+                Prepara ora
+                <span class="click-num">3</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ol class="steps" style="margin-top:20px;">
+        <li><span class="step-badge">1</span><span><strong>I 4 pulsanti al centro</strong> servono per cambiare sezione: <span class="btn-mention">Ricerca</span> (cerca), <span class="btn-mention">Schede</span> (leggi e scrivi), <span class="btn-mention">Grafico</span> (mappa visiva) e <span class="btn-mention">Campi</span> (categorie).</span></li>
+        <li><span class="step-badge">2</span><span><strong>Il cerchio con la tua iniziale</strong> in alto a destra apre il menu personale (per ingrandire le scritte, fare copie di sicurezza o uscire).</span></li>
+        <li><span class="step-badge">3</span><span><strong>La fascia verde chiara</strong> prepara automaticamente le nuove schede per la ricerca dopo pochi secondi. Se vedi il tasto <span class="btn-mention">Prepara ora</span>, puoi cliccarlo per fare subito, senza aspettare. Quando ha finito appare scritto <strong>Ricerca pronta ✓</strong>.</span></li>
+      </ol>
+
+      <div class="tip-box">
+        <strong>Sul telefono o tablet:</strong> i 4 pulsanti principali (<span class="btn-mention">Cerca</span>, <span class="btn-mention">Schede</span>, <span class="btn-mention">Grafico</span>, <span class="btn-mention">Campi</span>) si trovano invece nella barra fissa in basso allo schermo, comodi da toccare con il pollice.
+      </div>
+    </section>
+
+    <!-- CAPITOLO 3 -->
+    <section class="chapter" id="cap-3">
+      <div class="chapter-head">
+        <div class="chapter-num">3</div>
+        <h2>Ingrandire le scritte e cambiare colori</h2>
+      </div>
+      <p class="chapter-intro">
+        Se fai fatica a leggere le parole piccole o vuoi uno schermo più riposante per gli occhi, puoi sistemarlo in due clic.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>Clicca sul <strong>cerchio con la tua iniziale</strong> in alto a destra per aprire il menu.</span></li>
+        <li><span class="step-badge">2</span><span>Clicca su <span class="btn-mention">Testo grande</span>: tutte le scritte dell'app diventeranno subito più grandi e facili da leggere.</span></li>
+        <li><span class="step-badge neutral">3</span><span>Se vuoi lo sfondo scuro (per la sera), clicca sull'icona della <strong>luna</strong> 🌙 vicino alla parola <span class="btn-mention">Archivi</span>.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 3 — Il menu personale in alto a destra</div>
+        <div class="mockup-screen" style="background:#f3f3f3; padding:16px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:220px; padding-top:8px;">
+            <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Cosa trovi dentro questo menu:</div>
+            <ul style="padding-left:18px; font-size:13px; color:#57534e; line-height:1.7;">
+              <li><strong>Nuovo</strong>: crea un secondo archivio vuoto.</li>
+              <li><strong>Esporta JSON</strong>: salva una copia sul computer.</li>
+              <li><strong>Backup su Google Drive</strong>: salva su Google Drive.</li>
+              <li><strong>Lingua: Italiano</strong>: passa a Italiano o Tedesco.</li>
+              <li><strong>Testo grande</strong>: ingrandisce tutti i caratteri.</li>
+              <li><strong>Esci</strong>: chiude il tuo account.</li>
+            </ul>
+          </div>
+
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+            <div class="user-chip click-target" style="background:#fff;">
+              <span>Maria</span>
+              <div class="user-avatar">M</div>
+              <span class="click-num">1</span>
+            </div>
+            <div class="mock-dropdown-menu">
+              <div class="mock-menu-head">
+                <div style="font-weight:700; font-size:13px;">Maria Rossi</div>
+                <div style="font-size:11px; color:#78716c;">maria@gmail.com</div>
+              </div>
+              <div class="mock-menu-item">＋ Nuovo</div>
+              <div class="mock-menu-item">☁ Esporta JSON</div>
+              <div class="mock-menu-item">☁ Backup su Google Drive</div>
+              <div style="height:1px; background:#e5e5e5; margin:4px 10px;"></div>
+              <div class="mock-menu-item">🌐 Lingua: Italiano</div>
+              <div class="mock-menu-item click-target" style="background:#ecf5f1; color:#2a5245;">
+                Aa Testo grande
+                <span class="click-num">2</span>
+              </div>
+              <div style="height:1px; background:#e5e5e5; margin:4px 10px;"></div>
+              <div class="mock-menu-item" style="color:#dc2626;">↪ Esci</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPITOLO 4 -->
+    <section class="chapter" id="cap-4">
+      <div class="chapter-head">
+        <div class="chapter-num">4</div>
+        <h2>Scrivere una nuova scheda</h2>
+      </div>
+      <p class="chapter-intro">
+        Ogni argomento (un punto di agopuntura, un'erba, un alimento, un sintomo) ha la sua scheda personale.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>In alto, clicca su <span class="btn-mention">Schede</span>.</span></li>
+        <li><span class="step-badge">2</span><span>Clicca sul pulsante verde <span class="btn-mention">+ Nuova scheda</span>.</span></li>
+        <li><span class="step-badge">3</span><span>Appaiono tanti riquadri colorati (<span class="btn-mention">MCC</span>, <span class="btn-mention">MTC</span>, <span class="btn-mention">DIETETICA</span>, <span class="btn-mention">FITOTERAPIA</span>...). Clicca sul tipo di scheda che vuoi scrivere.</span></li>
+        <li><span class="step-badge">4</span><span>Riempi le caselle (almeno il nome/titolo, che è obbligatorio). In fondo puoi aggiungere foto con <span class="btn-mention">Carica foto</span>, poi clicca su <span class="btn-mention">Salva Scheda</span>.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 4A — Come aprire il modulo di una nuova scheda</div>
+        <div class="mockup-screen">
+          <div class="app-header-bar">
+            <div class="app-logo">
+              <div class="app-leaf-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              </div>
+              <span>Il mio archivio</span>
+            </div>
+            <div class="app-tabs-pill">
+              <span class="app-tab">🔍 Ricerca</span>
+              <span class="app-tab active click-target">🗂 Schede (12)<span class="click-num">1</span></span>
+              <span class="app-tab">🕸 Grafico</span>
+              <span class="app-tab">⚙ Campi</span>
+            </div>
+            <div class="app-right-tools"><div class="user-avatar">M</div></div>
+          </div>
+
+          <div class="mock-body">
+            <!-- Toolbar Schede -->
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:14px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:6px; background:#f3f3f3; padding:4px 8px; border-radius:10px; font-size:12px; font-weight:700;">
+                <span>‹</span>
+                <span style="padding:0 6px; color:#555;">1 / 12</span>
+                <span>›</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="background:#f3f3f3; padding:4px 8px; border-radius:8px; font-size:12px;">📄 | 📋</span>
+                <span class="btn-app-secondary">🔊 Pronuncia</span>
+                <span class="btn-app-secondary">Pulisci doppioni</span>
+                <span class="btn-app-primary click-target">
+                  + Nuova scheda
+                  <span class="click-num">2</span>
+                </span>
+                <span class="btn-app-danger">🗑 Elimina</span>
+                <span class="btn-app-primary" style="opacity:0.5;">Salvato</span>
+              </div>
+            </div>
+
+            <!-- Seleziona Tipologia -->
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:14px; padding:14px;">
+              <div style="font-weight:700; font-size:14px; margin-bottom:3px;">Seleziona Tipologia</div>
+              <div style="font-size:11.5px; color:#78716c; margin-bottom:10px;">Scegli il modello di scheda da creare</div>
+              <div class="tpl-grid">
+                <div class="tpl-card click-target">
+                  <div class="tpl-badge" style="background:#1976d2;">M</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">MCC</div>
+                    <div style="font-size:10.5px; color:#78716c;">Punti agopuntura</div>
+                  </div>
+                  <span class="click-num">3</span>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-badge" style="background:#212121;">M</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">MTC</div>
+                    <div style="font-size:10.5px; color:#78716c;">Punti tradizionale</div>
+                  </div>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-badge" style="background:#eab308;">D</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">DIETETICA</div>
+                    <div style="font-size:10.5px; color:#78716c;">Alimenti e proprietà</div>
+                  </div>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-badge" style="background:#2e7d32;">F</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">FITOTERAPIA</div>
+                    <div style="font-size:10.5px; color:#78716c;">Erbe e formule</div>
+                  </div>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-badge" style="background:#c62828;">P</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">PATOLOGIE</div>
+                    <div style="font-size:10.5px; color:#78716c;">Sindromi energetiche</div>
+                  </div>
+                </div>
+                <div class="tpl-card">
+                  <div class="tpl-badge" style="background:#6d28d9;">O</div>
+                  <div>
+                    <div style="font-weight:700; font-size:12px;">OLI ESSENZIALI</div>
+                    <div style="font-size:10.5px; color:#78716c;">Uso terapeutico</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 4B — La scheda da compilare e il tasto Salva in basso</div>
+        <div class="mockup-screen">
+          <div class="mock-body">
+            <div style="background:#fff; border:1px solid #e7e5e4; border-radius:16px; overflow:hidden;">
+              <div style="padding:12px 16px; border-bottom:1px solid #f0efeb; display:flex; justify-content:space-between; align-items:center; background:#f2f7fc;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div class="tpl-badge" style="background:#1976d2;">M</div>
+                  <div>
+                    <div style="font-weight:700; font-size:14px;">Nuova Scheda</div>
+                    <div style="font-size:11px; color:#1976d2; font-weight:700;">MCC</div>
+                  </div>
+                </div>
+                <span style="font-size:11px; color:#78716c;">Salvato automaticamente 10:35</span>
+              </div>
+
+              <div style="padding:14px 16px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                  <div style="font-weight:600; font-size:12px; margin-bottom:4px;">Nome principale p.to *</div>
+                  <div style="display:flex; gap:6px;">
+                    <div class="mock-input" style="flex:1;">Zusanli (ST 36)</div>
+                    <span class="btn-app-primary" style="font-size:11px; padding:5px 9px;">🔊 Pronuncia</span>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-weight:600; font-size:12px; margin-bottom:4px;">Ideogramma</div>
+                  <div style="display:flex; gap:6px;">
+                    <div class="mock-input" style="flex:1;">足三里</div>
+                    <span class="btn-app-secondary" style="font-size:11px; padding:5px 9px;">🔊 Pronuncia</span>
+                  </div>
+                </div>
+                <div style="grid-column:1 / -1;">
+                  <div style="font-weight:600; font-size:12px; margin-bottom:4px;">Localizzazione</div>
+                  <div class="mock-input" style="min-height:42px; color:#57534e;">3 cun sotto Dubi (ST 35), a un dito traverso dal bordo della tibia...</div>
+                </div>
+                <div style="grid-column:1 / -1; border-top:1px solid #ecebe7; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12px; font-weight:700; color:#44403c;">🖼 Galleria Immagini (0)</span>
+                  <span class="btn-app-secondary" style="font-size:11.5px;">⬆ Carica foto</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+              <span class="ghost-btn" style="padding:8px 14px;">Annulla</span>
+              <span class="btn-app-primary click-target" style="background:#1976d2; padding:8px 18px; font-size:13px;">
+                Salva Scheda
+                <span class="click-num">4</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <strong>Non aver paura di sbagliare:</strong> mentre scrivi il programma salva una bozza ogni pochi secondi. Se vuoi rinunciare, premi <span class="btn-mention">Annulla</span>.
+      </div>
+    </section>
+
+    <!-- CAPITOLO 5 -->
+    <section class="chapter" id="cap-5">
+      <div class="chapter-head">
+        <div class="chapter-num">5</div>
+        <h2>Ascoltare la pronuncia, leggere e collegare le schede</h2>
+      </div>
+      <p class="chapter-intro">
+        Quando apri una scheda salvata vedi due colonne: a sinistra la scheda colorata pronta da leggere, a destra i tuoi appunti liberi, le parole chiave e i collegamenti.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span><strong>Sfogliare le schede:</strong> usa le freccette <span class="btn-mention">‹</span> e <span class="btn-mention">›</span> in alto a sinistra per passare alla scheda prima o dopo.</span></li>
+        <li><span class="step-badge">2</span><span><strong>Vedere tutto in elenco:</strong> clicca sull'icona della tabella <span class="btn-mention">📋</span> accanto alle freccette per vedere tutte le schede una sotto l'altra.</span></li>
+        <li><span class="step-badge">3</span><span><strong>Ascoltare la pronuncia cinese:</strong> clicca su <span class="btn-mention">🔊 Pronuncia</span> nella barra in alto (o dentro la scheda) per sentire la voce.</span></li>
+        <li><span class="step-badge">4</span><span><strong>Modificare una scheda:</strong> clicca sul pulsante <span class="btn-mention">Modifica scheda</span> sotto la scheda colorata.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 5 — Scheda aperta: lettura, pronuncia, modifica e appunti</div>
+        <div class="mockup-screen">
+          <div class="mock-body">
+            <!-- Mini barra azioni -->
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="click-target" style="display:inline-flex; align-items:center; gap:6px; background:#f3f3f3; padding:3px 9px; border-radius:8px; font-weight:700; font-size:12px;">
+                  ‹ &nbsp; 1 / 12 &nbsp; ›
+                  <span class="click-num">1</span>
+                </span>
+                <span class="click-target" style="display:inline-flex; gap:6px; background:#f3f3f3; padding:4px 8px; border-radius:8px; font-size:12px;">
+                  <span>📄</span><span style="opacity:0.6;">📋</span>
+                  <span class="click-num">2</span>
+                </span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="btn-app-secondary click-target">
+                  🔊 Pronuncia · 1x
+                  <span class="click-num">3</span>
+                </span>
+                <span class="btn-app-primary">+ Nuova scheda</span>
+              </div>
+            </div>
+
+            <!-- Due colonne -->
+            <div class="two-col">
+              <!-- Sinistra: CardPreview -->
+              <div>
+                <div class="card-preview-mock">
+                  <div class="card-preview-top">
+                    <div style="font-size:10px; font-weight:700; opacity:0.8; letter-spacing:0.06em;">MCC</div>
+                    <div style="font-family:Georgia,serif; font-size:17px; font-weight:700;">Zusanli (ST 36)</div>
+                  </div>
+                  <div class="card-preview-body">
+                    <div style="margin-bottom:8px;">
+                      <div style="font-size:10px; color:#a8a29e; font-weight:700;">IDEOGRAMMA</div>
+                      <div style="font-family:Georgia,serif; font-size:16px;">足三里</div>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                      <div style="font-size:10px; color:#a8a29e; font-weight:700;">AZIONI / FUNZIONI</div>
+                      <div style="color:#44403c;">Tonifica il Qi e il Sangue, rafforza <span class="wiki-link-chip">Milza</span> e <span class="wiki-link-chip">Stomaco</span>.</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="text-align:center; margin-top:10px;">
+                  <span class="btn-app-secondary click-target" style="border-color:#3a6d5d; color:#3a6d5d; padding:7px 22px;">
+                    Modifica scheda
+                    <span class="click-num">4</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Destra: Wiki & Tag & Connessioni -->
+              <div>
+                <div class="wiki-box-mock">
+                  <div style="font-weight:700; font-size:12.5px; border-bottom:1px solid #f0efeb; padding-bottom:6px; margin-bottom:6px;">📄 Contenuto Libero &amp; Wiki</div>
+                  <div style="font-size:12px; color:#44403c; line-height:1.5;">
+                    Punto principale per la stanchezza. Vedi anche <span class="wiki-link-chip">Sanyinjiao</span>.
+                  </div>
+                </div>
+
+                <div class="wiki-box-mock">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:700; font-size:12.5px;">🏷 Tag &amp; Nomenclatura MTC</span>
+                    <span class="btn-app-secondary" style="font-size:10.5px; padding:3px 7px;">Analizza contenuto</span>
+                  </div>
+                  <div style="display:flex; gap:5px; flex-wrap:wrap; font-size:11px;">
+                    <span style="background:#f3f3f3; border:1px solid #e5e5e5; padding:2px 7px; border-radius:7px;">#tonificante</span>
+                    <span style="background:#f3f3f3; border:1px solid #e5e5e5; padding:2px 7px; border-radius:7px;">#stomaco</span>
+                    <span style="background:#f3f3f3; border:1px solid #e5e5e5; padding:2px 7px; border-radius:7px;">#milza</span>
+                  </div>
+                </div>
+
+                <div class="wiki-box-mock" style="margin-bottom:0;">
+                  <div style="font-weight:700; font-size:12.5px; margin-bottom:4px;">🕸 Connessioni</div>
+                  <div style="font-size:11.5px; color:#78716c;">Scheda collegata: <strong>Sanyinjiao</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <strong>Trucco veloce per collegare due schede:</strong> quando scrivi negli appunti, metti il nome di un'altra scheda tra doppie parentesi quadre, così: <strong>[[Sanyinjiao]]</strong>. Diventerà un pulsante giallo cliccabile!
+      </div>
+    </section>
+
+    <!-- CAPITOLO 6 -->
+    <section class="chapter" id="cap-6">
+      <div class="chapter-head">
+        <div class="chapter-num">6</div>
+        <h2>Cercare tra le tue schede</h2>
+      </div>
+      <p class="chapter-intro">
+        Non serve ricordare il nome cinese preciso: puoi scrivere la domanda con parole normali di tutti i giorni.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>In alto, clicca su <span class="btn-mention">Ricerca</span>.</span></li>
+        <li><span class="step-badge">2</span><span>Scrivi cosa stai cercando nella barra bianca (per esempio: <em>"stanchezza dopo i pasti e gonfiore"</em>) e clicca sul tasto verde <span class="btn-mention">Cerca</span> (oppure premi il tasto <strong>Invio</strong> sulla tastiera).</span></li>
+        <li><span class="step-badge">3</span><span>Sotto appare subito il <span class="btn-mention">Riassunto</span> costruito solo dalle tue schede. Clicca su <span class="btn-mention">Elenco risultati</span> se vuoi vedere la lista completa, poi clicca su una scheda per aprirla.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 6 — Cercare con parole proprie e leggere il Riassunto</div>
+        <div class="mockup-screen">
+          <div class="app-header-bar">
+            <div class="app-logo">
+              <div class="app-leaf-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              </div>
+              <span>Il mio archivio</span>
+            </div>
+            <div class="app-tabs-pill">
+              <span class="app-tab active click-target">🔍 Ricerca<span class="click-num">1</span></span>
+              <span class="app-tab">🗂 Schede (12)</span>
+              <span class="app-tab">🕸 Grafico</span>
+              <span class="app-tab">⚙ Campi</span>
+            </div>
+            <div class="app-right-tools"><div class="user-avatar">M</div></div>
+          </div>
+
+          <div class="mock-body">
+            <!-- Barra ricerca -->
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+              <div class="mock-input" style="flex:1; padding:9px 12px; font-weight:500;">stanchezza dopo i pasti e gonfiore</div>
+              <span class="btn-app-primary click-target" style="padding:9px 18px;">
+                🔍 Cerca
+                <span class="click-num">2</span>
+              </span>
+            </div>
+
+            <!-- Filtri -->
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <span style="background:#fff; border:1px solid #e5e5e5; border-radius:9px; padding:5px 10px; font-size:11.5px;">Tutti i tipi ▼</span>
+              <span style="background:#fff; border:1px solid #e5e5e5; border-radius:9px; padding:5px 10px; font-size:11.5px;">Tutti i tag ▼</span>
+            </div>
+
+            <!-- Selettore Riassunto / Elenco -->
+            <div class="app-tabs-pill click-target" style="margin-bottom:12px; padding:3px;">
+              <span class="app-tab active">📖 Riassunto</span>
+              <span class="app-tab">☰ Elenco risultati (4)</span>
+              <span class="click-num">3</span>
+            </div>
+
+            <!-- Scheda Riassunto -->
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:14px; padding:14px 16px;">
+              <div style="font-family:Georgia,serif; font-size:16px; font-weight:700; margin-bottom:2px;">stanchezza dopo i pasti e gonfiore</div>
+              <div style="font-size:11px; color:#78716c; border-bottom:1px solid #ecebe7; padding-bottom:8px; margin-bottom:8px;">
+                Sintesi generata esclusivamente da 3 schede dell'archivio
+              </div>
+              <div style="font-size:12.5px; color:#292524; line-height:1.55; margin-bottom:10px;">
+                Per sostenere l'energia dopo i pasti e ridurre il gonfiore si utilizzano punti come <strong>Zusanli (ST 36)</strong> <span style="color:#3a6d5d; font-weight:700;">[1]</span> e rimedi che tonificano la Milza <span style="color:#3a6d5d; font-weight:700;">[2]</span>.
+              </div>
+              <div style="border-top:1px solid #ecebe7; padding-top:8px; font-size:12px;">
+                <div style="font-weight:700; margin-bottom:4px;">Fonti</div>
+                <div><span style="color:#3a6d5d; font-weight:700;">[1]</span> Zusanli (ST 36) &nbsp; · &nbsp; <span style="color:#3a6d5d; font-weight:700;">[2]</span> Vuoto di Qi della Milza</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPITOLO 7 -->
+    <section class="chapter" id="cap-7">
+      <div class="chapter-head">
+        <div class="chapter-num">7</div>
+        <h2>Vedere la mappa dei collegamenti (Grafico)</h2>
+      </div>
+      <p class="chapter-intro">
+        Il Grafico disegna tutte le tue schede come tanti pallini colorati uniti da linee. Ti aiuta a vedere a colpo d'occhio quali argomenti si assomigliano o sono collegati tra loro.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>In alto, clicca su <span class="btn-mention">Grafico</span>.</span></li>
+        <li><span class="step-badge">2</span><span>Puoi avvicinare o allontanare la mappa usando i tasti <span class="btn-mention">+</span> e <span class="btn-mention">-</span> in alto a sinistra. Per spostarti, tieni premuto il mouse sullo sfondo e trascina.</span></li>
+        <li><span class="step-badge">3</span><span>Clicca su un pallino qualsiasi: a destra si apre il pannello con l'anteprima. Clicca su <span class="btn-mention">Apri scheda</span> per leggerla per intero.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 7 — Il Grafico interattivo e l'apertura della scheda</div>
+        <div class="mockup-screen">
+          <div class="mock-body">
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+              <div style="font-family:Georgia,serif; font-weight:700; font-size:13px;">🕸 Grafo della Conoscenza MTC</div>
+              <div style="display:flex; gap:6px; font-size:11px;">
+                <span style="background:#ecfdf5; border:1px solid #86efac; color:#065f46; padding:3px 8px; border-radius:7px; font-weight:600;">Link Wiki espliciti</span>
+                <span style="background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:3px 8px; border-radius:7px; font-weight:600;">Similarità semantica</span>
+              </div>
+            </div>
+
+            <div class="graph-canvas-mock">
+              <!-- Controlli zoom -->
+              <div class="click-target" style="position:absolute; top:10px; left:10px; background:#fff; border:1px solid #d6d3d1; border-radius:9px; padding:3px; display:flex; flex-direction:column; gap:2px; font-weight:700; font-size:12px; text-align:center; width:26px;">
+                <span>+</span>
+                <span style="border-top:1px solid #eee; border-bottom:1px solid #eee;">−</span>
+                <span>⛶</span>
+                <span class="click-num">2</span>
+              </div>
+
+              <!-- Linee e pallini SVG -->
+              <svg width="65%" height="100%" viewBox="0 0 360 190" style="display:block;">
+                <line x1="120" y1="95" x2="215" y2="55" stroke="#059669" stroke-width="2" />
+                <line x1="120" y1="95" x2="225" y2="140" stroke="#d97706" stroke-width="1.8" stroke-dasharray="5,4" />
+                <line x1="120" y1="95" x2="65" y2="145" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,4" />
+                <line x1="215" y1="55" x2="280" y2="95" stroke="#94a3b8" stroke-width="1.2" />
+
+                <circle cx="120" cy="95" r="16" fill="rgba(217,119,6,0.18)" />
+                <circle cx="120" cy="95" r="10" fill="#1976d2" stroke="#1c1917" stroke-width="2" />
+                <text x="120" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#1c1917">Zusanli (ST 36)</text>
+
+                <circle cx="215" cy="55" r="8" fill="#059669" stroke="#fff" stroke-width="1.5" />
+                <text x="215" y="75" text-anchor="middle" font-size="10" fill="#1c1917">Sanyinjiao</text>
+
+                <circle cx="225" cy="140" r="8" fill="#d97706" stroke="#fff" stroke-width="1.5" />
+                <text x="225" y="160" text-anchor="middle" font-size="10" fill="#1c1917">Stanchezza</text>
+
+                <circle cx="65" cy="145" r="7" fill="#7c3aed" stroke="#fff" stroke-width="1.5" />
+                <text x="65" y="164" text-anchor="middle" font-size="10" fill="#1c1917">Milza</text>
+              </svg>
+
+              <!-- Pannello laterale -->
+              <div class="graph-side-drawer">
+                <div>
+                  <div style="font-size:10.5px; color:#78716c;">🔵 MCC · 3 archi</div>
+                  <div style="font-family:Georgia,serif; font-weight:700; font-size:13.5px; margin:2px 0 6px;">Zusanli (ST 36)</div>
+                  <div style="font-size:11px; color:#57534e; line-height:1.4; margin-bottom:8px;">Tonifica il Qi e il Sangue, rafforza Milza e Stomaco.</div>
+                  <div style="font-size:10.5px; font-weight:700; color:#44403c; margin-bottom:3px;">Nodi connessi</div>
+                  <div style="font-size:11px; color:#57534e;">• Sanyinjiao<br/>• Stanchezza (84%)</div>
+                </div>
+                <div class="btn-app-primary click-target" style="width:100%; justify-content:center; padding:6px;">
+                  ↗ Apri scheda
+                  <span class="click-num">3</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPITOLO 8 -->
+    <section class="chapter" id="cap-8">
+      <div class="chapter-head">
+        <div class="chapter-num">8</div>
+        <h2>Mettere al sicuro le tue schede (Copia di riserva)</h2>
+      </div>
+      <p class="chapter-intro">
+        Le tue schede restano salvate dentro questo computer (o telefono). Se un giorno cambi computer o fai pulizia sul programma con cui navighi su Internet, potresti perderle se non hai fatto una copia di sicurezza.
+      </p>
+
+      <div class="safe-box">
+        <strong>Consiglio d'oro:</strong> collega Google Drive una volta sola. Da quel momento l'app salverà una copia sicura in automatico sul tuo Google Drive!
+      </div>
+
+      <ol class="steps" style="margin-top:18px;">
+        <li><span class="step-badge">1</span><span>Clicca sul <strong>cerchio con la tua iniziale</strong> in alto a destra e scegli <span class="btn-mention">Backup su Google Drive</span>.</span></li>
+        <li><span class="step-badge">2</span><span>La prima volta, clicca sul pulsante verde <span class="btn-mention">Collega Google Drive</span> e dai il consenso nella finestra di Google.</span></li>
+        <li><span class="step-badge">3</span><span>Quando è collegato, puoi cliccare in qualunque momento su <span class="btn-mention">Salva ora su Drive</span> per salvare subito una copia.</span></li>
+        <li><span class="step-badge neutral">4</span><span>Se cambi computer, apri questa stessa finestra e clicca <span class="btn-mention">Ripristina</span> vicino alla tua ultima copia: riavrai tutte le schede!</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 8 — Finestra del salvataggio automatico su Google Drive</div>
+        <div class="mockup-screen" style="background:#f3f3f3; padding:16px;">
+          <div class="mock-modal" style="max-width:520px;">
+            <div class="mock-modal-head">
+              <span>Backup su Google Drive</span>
+              <span style="color:#a8a29e;">✕</span>
+            </div>
+
+            <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+              <div>
+                <div style="font-weight:700; color:#064e3b; font-size:13px;">✓ Google Drive collegato</div>
+                <div style="font-size:11px; color:#047857;">Ultimo backup: oggi 10:15 · Automatico</div>
+              </div>
+              <span class="btn-app-emerald click-target">
+                ☁ Salva ora su Drive
+                <span class="click-num">3</span>
+              </span>
+            </div>
+
+            <div style="font-family:Georgia,serif; font-weight:700; font-size:13.5px; margin-bottom:8px;">File di backup su Drive</div>
+            <div style="border:1px solid #e7e5e4; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; background:#fff;">
+              <div>
+                <div style="font-weight:700; font-size:12px;">Archivio Semantico - Il mio archivio.json</div>
+                <div style="font-size:10.5px; color:#78716c;">Modificato: 25/11/2026, 10:15</div>
+              </div>
+              <span class="btn-app-emerald click-target" style="padding:5px 10px; font-size:11.5px;">
+                ⬇ Ripristina
+                <span class="click-num">4</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        <strong>Preferisci salvare un file sul tuo computer?</strong> Apri il menu con la tua iniziale e clicca <span class="btn-mention">Esporta JSON</span>: scaricherai un file nella cartella <em>Download</em>. Per ricaricarlo in futuro, clicca <span class="btn-mention">Archivi</span> in alto e poi <span class="btn-mention">Importa JSON</span>.
+      </div>
+    </section>
+
+    <!-- CAPITOLO 9 -->
+    <section class="chapter" id="cap-9">
+      <div class="chapter-head">
+        <div class="chapter-num">9</div>
+        <h2>Aggiungere nuovi tipi di schede o nuovi campi</h2>
+      </div>
+      <p class="chapter-intro">
+        I modelli già pronti vanno benissimo per iniziare. Se però vuoi creare una nuova categoria tutta tua (o aggiungere una voce extra dentro le schede), usa la sezione <strong>Campi</strong>.
+      </p>
+
+      <ol class="steps">
+        <li><span class="step-badge">1</span><span>In alto, clicca su <span class="btn-mention">Campi</span>.</span></li>
+        <li><span class="step-badge">2</span><span>Scrivi il nome nella casella <span class="btn-mention">Nuovo tipo...</span> (o <span class="btn-mention">Nuovo campo...</span>) e poi clicca sul pulsante verde <span class="btn-mention">+</span> accanto.</span></li>
+      </ol>
+
+      <div class="mockup-wrap">
+        <div class="mockup-caption">Figura 9 — Aggiungere un nuovo tipo di scheda o un nuovo campo</div>
+        <div class="mockup-screen">
+          <div class="mock-body">
+            <div style="background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+              <div style="font-weight:700; font-size:13px; margin-bottom:8px;">Tipi di schede</div>
+              <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:12px; border-bottom:1px solid #f5f5f4;"><span>Agopuntura</span><span style="color:#78716c;">✎ &nbsp; 🗑</span></div>
+              <div style="display:flex; justify-content:space-between; padding:4px 0 8px; font-size:12px;"><span>Erbe</span><span style="color:#78716c;">✎ &nbsp; 🗑</span></div>
+              <div style="display:flex; gap:8px;">
+                <div class="mock-input" style="flex:1; color:#a8a29e;">Nuovo tipo...</div>
+                <span class="btn-app-primary click-target" style="padding:6px 12px;">+<span class="click-num">2</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPITOLO 10 -->
+    <section class="chapter" id="cap-10">
+      <div class="chapter-head">
+        <div class="chapter-num">10</div>
+        <h2>Piccoli problemi e risposte veloci</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q">Ho scritto una nuova scheda, ma quando la cerco non esce ancora.</div>
+          <div class="faq-a">Guarda la striscia verde chiara sotto la barra in alto. Se vedi scritto <strong>"1 scheda da preparare"</strong> con il pulsante <span class="btn-mention">Prepara ora</span>, cliccalo e aspetta pochi secondi finché compare <strong>Ricerca pronta ✓</strong>.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Le scritte sono troppo piccole per me.</div>
+          <div class="faq-a">Clicca sul cerchio con la tua iniziale in alto a destra e poi clicca su <span class="btn-mention">Testo grande</span>.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Ho dimenticato la password per entrare.</div>
+          <div class="faq-a">Nella finestra di accesso (Figura 1), clicca sulla scritta <span class="btn-mention">Password dimenticata?</span>, scrivi la tua email e segui il messaggio che riceverai per posta.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Devo fare "Salva" ogni volta che scrivo?</div>
+          <div class="faq-a">Quando compili una nuova scheda, alla fine premi sempre <span class="btn-mention">Salva Scheda</span>. Per sicurezza, guarda in alto a sinistra: quando compare <strong>Salvato in locale</strong> significa che è tutto al sicuro.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Questo programma sostituisce il medico?</div>
+          <div class="faq-a">No. È un tuo quaderno personale per ritrovare i tuoi appunti e le tue schede di studio.</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      Manuale d'uso di <strong>Archivio Semantico</strong> · Stampabile su carta o salvabile in PDF dal tasto in alto.
+    </footer>
+
+  </main>
+
+</body>
+</html>

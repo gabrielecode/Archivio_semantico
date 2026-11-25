@@ -1,10 +1,25 @@
-import {HelpCircle} from 'lucide-react';
+import {HelpCircle, Printer} from 'lucide-react';
 import {useTranslation} from '../utils/i18n';
 
 export default function GuideContent() {
     const {t} = useTranslation();
     return (
         <div className="space-y-10 text-stone-900 text-base leading-relaxed">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h3 className="font-bold text-emerald-950 text-base">Manuale illustrato facile (stampabile e PDF)</h3>
+                    <p className="text-sm text-emerald-900">Guida passo passo con figure dei pulsanti, pensata anche per chi usa poco il computer.</p>
+                </div>
+                <a
+                    href="/manuale.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap shrink-0"
+                >
+                    <Printer size={16} />
+                    Apri Manuale / PDF
+                </a>
+            </div>
             <section className="space-y-4">
                 <h2 className="text-2xl font-serif font-bold text-stone-900 border-b pb-2">{t('guideHowItWorksTitle')}</h2>
                 <p className="text-stone-700">

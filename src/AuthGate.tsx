@@ -419,7 +419,11 @@ export default function AuthGate() {
       <footer className="bg-white border-t border-stone-200 text-center p-8 text-sm text-stone-500 mt-20 space-y-2">
         <p>{t('disclaimerConsultation')}</p>
         <p className="text-xs">{t('disclaimerSimilarity')}</p>
-        <div className="flex items-center justify-center gap-4 text-xs text-stone-600 pt-2">
+        <div className="flex items-center justify-center gap-4 text-xs text-stone-600 pt-2 flex-wrap">
+          <a href="/manuale.html" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-700 underline font-semibold">
+            Manuale illustrato (PDF)
+          </a>
+          <span>•</span>
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-700 underline">
             Informativa sulla Privacy
           </a>

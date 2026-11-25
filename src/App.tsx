@@ -719,7 +719,11 @@ export default function App({
         <div className="max-w-2xl mx-auto space-y-4">
           <p className="leading-relaxed">{t('disclaimerConsultation')}</p>
           <p className="text-sm opacity-60">{t('disclaimerSimilarity')}</p>
-          <div className="flex items-center justify-center gap-4 text-xs text-text-muted pt-1">
+          <div className="flex items-center justify-center gap-4 text-xs text-text-muted pt-1 flex-wrap">
+            <a href="/manuale.html" target="_blank" rel="noopener noreferrer" className="hover:text-accent underline font-semibold">
+              Manuale illustrato (PDF)
+            </a>
+            <span>•</span>
             <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-accent underline">
               Informativa sulla Privacy
             </a>
