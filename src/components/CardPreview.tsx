@@ -31,7 +31,16 @@ export const CardPreview = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxUrl]);
 
-  const audioTarget = record.campi['ideogramma'] || record.campi['nome_principale'] || record.titolo;
+  const hasChineseChars = (text: string) => /[\u4e00-\u9fff]/.test(text);
+  const audioTarget =
+    [
+      record.campi?.['ideogramma'],
+      record.campi?.['ideogrammi'],
+      record.campi?.['ideogramma_principale'],
+    ]
+      .map((v) => (typeof v === 'string' ? v.trim() : Array.isArray(v) ? v.join(' ').trim() : ''))
+      .find(Boolean) || '';
+  const hasChineseAudioTarget = hasChineseChars(audioTarget);
 
   const renderWikiText = (text: string) => {
     const segments = parseWikiSegments(text);
@@ -80,7 +89,7 @@ export const CardPreview = ({
           <div className="text-sm uppercase tracking-widest font-bold opacity-70">
             {template.name}
           </div>
-          {audioTarget && (
+          {hasChineseAudioTarget && (
             <PronunciationButton
               text={audioTarget}
               variant="ghost"
@@ -107,10 +116,9 @@ export const CardPreview = ({
             <div key={f.id} className="space-y-1">
               <div className="text-sm uppercase font-bold text-stone-400 tracking-wider flex items-center justify-between">
                 <span>{f.label}</span>
-                {isAudioField && typeof val === 'string' && val.trim() && (
+                {isAudioField && typeof val === 'string' && val.trim() && hasChineseAudioTarget && (
                   <PronunciationButton
-                    text={val}
-                    fallbackText={audioTarget}
+                    text={audioTarget}
                     size="xs"
                     variant="inline"
                     title={`Pronuncia per ${f.label}`}
@@ -135,8 +143,8 @@ export const CardPreview = ({
                       <li key={i} className="text-sm">
                         <span className="inline-flex items-center gap-2">
                           <span>{item}</span>
-                          {f.id === 'nomi_secondari' && item && item.trim() && (
-                            <PronunciationButton text={item} size="xs" variant="icon" title="Ascolta pronuncia" />
+                          {f.id === 'nomi_secondari' && typeof item === 'string' && item.trim() && hasChineseChars(item) && (
+                            <PronunciationButton text={item.trim()} size="xs" variant="icon" title="Ascolta pronuncia" />
                           )}
                         </span>
                       </li>

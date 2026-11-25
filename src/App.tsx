@@ -565,7 +565,7 @@ export default function App({
               ) : dirty ? (
                 <span className="text-amber-700 dark:text-amber-400 font-semibold">{t('unsavedChangesPending')}</span>
               ) : saveState === 'saved' ? (
-                <span className="text-accent font-semibold tabular-nums">Sincronizzato {lastSavedTime}</span>
+                <span className="text-accent font-semibold tabular-nums">Salvato in locale {lastSavedTime}</span>
               ) : (
                 <span className="text-text-muted">Pronto</span>
               )}
