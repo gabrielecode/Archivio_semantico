@@ -277,19 +277,21 @@ export function DataTab({
   };
 
   const handleCreateRecordFromWiki = (title: string) => {
-    const tipo = archive.schema.tipi[0] || 'Sintomo';
+    const firstTemplate = templates[0];
+    const tipo = firstTemplate?.id || 'mcc';
     const newId = crypto.randomUUID();
     const existing = findDuplicate(title, tipo, newId);
     if (existing) {
       showDuplicateDialog(existing);
       return;
     }
+    const sourceTitle = draft?.titolo?.trim();
     const newRec: Rec = {
       id: newId,
       titolo: title,
       tipo,
-      categoria: tipo,
-      contenuto: `Creato automaticamente tramite link da [[${draft?.titolo || ''}]].\n\n`,
+      categoria: firstTemplate?.name || tipo,
+      contenuto: sourceTitle ? `Creato automaticamente tramite link da [[${sourceTitle}]].\n\n` : '',
       tags: [],
       tag: [],
       outlinks: [],
@@ -612,7 +614,14 @@ export function DataTab({
               </>
             ) : (
               <div className="space-y-8">
-                <CardPreview record={draft} />
+                <CardPreview
+                  record={draft}
+                  archive={archive}
+                  onSelectRecord={(id) => {
+                    lastLoadedIdRef.current = null;
+                    setSelectedId(id);
+                  }}
+                />
                 <div className="flex justify-center">
                   <Button
                     variant="outline"

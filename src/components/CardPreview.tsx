@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Rec, Template } from '../types';
+import { Archive, Rec, Template } from '../types';
 import { ExternalLink, Video, X } from 'lucide-react';
 import { PronunciationButton } from './PronunciationButton';
+import { parseWikiSegments, resolveRecord } from '../utils/parser';
 import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
 
-export const CardPreview = ({ record }: { record: Rec }) => {
+export const CardPreview = ({
+  record,
+  archive,
+  onSelectRecord,
+  onCreateRecord,
+}: {
+  record: Rec;
+  archive?: Archive;
+  onSelectRecord?: (id: string) => void;
+  onCreateRecord?: (title: string) => void;
+}) => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const template = templates.find(t => t.id === record.tipo) || templates[0];
   const fields = template.fields;
@@ -21,6 +32,45 @@ export const CardPreview = ({ record }: { record: Rec }) => {
   }, [lightboxUrl]);
 
   const audioTarget = record.campi['ideogramma'] || record.campi['nome_principale'] || record.titolo;
+
+  const renderWikiText = (text: string) => {
+    const segments = parseWikiSegments(text);
+    if (segments.length === 0) return text;
+    return segments.map((seg, idx) => {
+      if (seg.type === 'text') {
+        return <React.Fragment key={idx}>{seg.content}</React.Fragment>;
+      }
+      const targetTitle = seg.targetTitle || '';
+      const label = seg.label || targetTitle;
+      const targetRec = archive ? resolveRecord(archive, targetTitle) : undefined;
+
+      if (targetRec) {
+        return (
+          <button
+            key={`${targetTitle}-${idx}`}
+            type="button"
+            onClick={() => onSelectRecord?.(targetRec.id)}
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 text-sm font-medium transition-colors mx-0.5 cursor-pointer"
+            title={`Vai alla scheda: ${targetRec.titolo}`}
+          >
+            {label}
+          </button>
+        );
+      }
+
+      return (
+        <button
+          key={`create-${targetTitle}-${idx}`}
+          type="button"
+          onClick={onCreateRecord ? () => onCreateRecord(targetTitle) : undefined}
+          className="inline-flex items-center text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200 text-sm font-medium transition-colors mx-0.5 cursor-pointer group"
+          title={`Crea nuova scheda: ${targetTitle}`}
+        >
+          <span className="mr-1 font-bold">+ Crea:</span> {label}
+        </button>
+      );
+    });
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-stone-200 h-full flex flex-col">
@@ -70,10 +120,14 @@ export const CardPreview = ({ record }: { record: Rec }) => {
               <div className="text-stone-800">
                 {f.type === 'text' && (
                   <span className={`font-medium ${f.id === 'ideogramma' || f.id === 'ideogrammi' ? 'text-xl tracking-wider font-serif' : ''}`}>
-                    {val}
+                    {typeof val === 'string' ? renderWikiText(val) : val}
                   </span>
                 )}
-                {f.type === 'textarea' && <p className="whitespace-pre-wrap leading-relaxed">{val}</p>}
+                {f.type === 'textarea' && (
+                  <p className="whitespace-pre-wrap leading-relaxed">
+                    {typeof val === 'string' ? renderWikiText(val) : val}
+                  </p>
+                )}
                 {f.type === 'number' && <span className="font-mono text-lg">{val}</span>}
                 {f.type === 'list' && (
                   <ul className="list-disc list-inside space-y-1">

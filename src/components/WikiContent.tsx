@@ -38,7 +38,12 @@ export function WikiContent({
         
         if (lastOpenBrackets !== -1) {
             const textSinceOpen = textBeforeCursor.substring(lastOpenBrackets + 2);
-            if (!textSinceOpen.includes(']]')) {
+            if (
+                !textSinceOpen.includes(']') &&
+                !textSinceOpen.includes('\n') &&
+                !textSinceOpen.includes('\r') &&
+                textSinceOpen.length <= 60
+            ) {
                 setShowDropdown(true);
                 setQuery(textSinceOpen);
                 setOpenPos(lastOpenBrackets);
