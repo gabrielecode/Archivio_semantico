@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { Search, History } from 'lucide-react';
+import { Search, History, BookOpen, List } from 'lucide-react';
 import { Archive, Template } from '../types';
-import { fetchEmbeddings } from '../utils/api';
+import { fetchEmbeddings, fetchSummary, SummarizeSource } from '../utils/api';
 import { Button, EmptyState } from './ui';
 import { buildHeader } from '../utils/chunk';
 import { useTranslation } from '../utils/i18n';
@@ -47,8 +47,19 @@ export const SearchTab = ({
   const [error, setError] = useState<string | null>(null);
   const [topN, setTopN] = useState(10);
   const [recent, setRecent] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'summary' | 'list'>('summary');
+  const [summaryData, setSummaryData] = useState<{
+    markdown: string;
+    sources: { n: number; id: string; titolo: string }[];
+  } | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(false);
   const abortController = useRef<AbortController | null>(null);
+  const summaryAbortController = useRef<AbortController | null>(null);
   const queryCache = useRef<{ key: string; vec: number[] } | null>(null);
+  const summaryCache = useRef<
+    Map<string, { markdown: string; sources: { n: number; id: string; titolo: string }[] }>
+  >(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,6 +73,7 @@ export const SearchTab = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       abortController.current?.abort();
+      summaryAbortController.current?.abort();
     };
   }, []);
 
@@ -144,6 +156,98 @@ export const SearchTab = ({
     [archive.records, tipo, tag]
   );
 
+  const generateSummary = useCallback(
+    async (q: string, searchResults: { id: string; score: number; chunkText: string }[]) => {
+      const trimmed = q.trim();
+      if (!trimmed || searchResults.length === 0) {
+        setSummaryData(null);
+        setSummaryError(false);
+        setSummaryLoading(false);
+        return;
+      }
+
+      const topEntries = searchResults
+        .slice(0, 6)
+        .map((res) => {
+          const rec = archive.records.find((r) => r.id === res.id);
+          return rec ? { res, rec } : null;
+        })
+        .filter(
+          (x): x is { res: { id: string; score: number; chunkText: string }; rec: Archive['records'][number] } =>
+            x !== null
+        );
+
+      if (topEntries.length === 0) {
+        setSummaryData(null);
+        setSummaryError(false);
+        setSummaryLoading(false);
+        return;
+      }
+
+      const cacheKey = `${trimmed.toLowerCase()}::${topEntries
+        .map(({ rec }) => `${rec.id}@${rec.modificato}`)
+        .join('|')}`;
+
+      const cached = summaryCache.current.get(cacheKey);
+      if (cached) {
+        setSummaryData(cached);
+        setSummaryError(false);
+        setSummaryLoading(false);
+        return;
+      }
+
+      summaryAbortController.current?.abort();
+      const controller = new AbortController();
+      summaryAbortController.current = controller;
+
+      const apiSources: SummarizeSource[] = [];
+      const uiSources: { n: number; id: string; titolo: string }[] = [];
+
+      topEntries.forEach(({ res, rec }) => {
+        const header = buildHeader(rec);
+        const rawText = (res.chunkText || rec.contenuto || header || rec.titolo || '').trim();
+        if (!rawText) return;
+        const n = apiSources.length + 1;
+        const titolo = (rec.titolo || 'Senza titolo').trim();
+        const campo = (templateNameMap.get(rec.tipo) || rec.tipo || 'Scheda').trim();
+        apiSources.push({
+          n,
+          titolo: titolo.slice(0, 300),
+          campo: campo.slice(0, 200),
+          testo: rawText.slice(0, 1500),
+        });
+        uiSources.push({ n, id: rec.id, titolo });
+      });
+
+      if (apiSources.length === 0) {
+        setSummaryData(null);
+        setSummaryError(false);
+        setSummaryLoading(false);
+        return;
+      }
+
+      setSummaryLoading(true);
+      setSummaryError(false);
+
+      try {
+        const resp = await fetchSummary(trimmed.slice(0, 500), apiSources, controller.signal);
+        if (controller.signal.aborted) return;
+        const entry = { markdown: resp.markdown, sources: uiSources };
+        summaryCache.current.set(cacheKey, entry);
+        setSummaryData(entry);
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+        setSummaryData(null);
+        setSummaryError(true);
+      } finally {
+        if (!controller.signal.aborted) {
+          setSummaryLoading(false);
+        }
+      }
+    },
+    [archive.records, templateNameMap]
+  );
+
   const performSearch = useCallback(
     async (q: string) => {
       const trimmed = q.trim();
@@ -153,8 +257,10 @@ export const SearchTab = ({
 
       const lexical = lexicalSearch(trimmed);
       if (filteredRecords.length === 0) {
+        const lexicalSorted = lexical.sort((a, b) => b.score - a.score);
         setLoading(false);
-        setResults(lexical.sort((a, b) => b.score - a.score));
+        setResults(lexicalSorted);
+        void generateSummary(trimmed, lexicalSorted);
         return;
       }
 
@@ -211,16 +317,19 @@ export const SearchTab = ({
 
         const newResults = Array.from(merged.values()).sort((a, b) => b.score - a.score);
         setResults(newResults);
+        void generateSummary(trimmed, newResults);
       } catch (e: unknown) {
         if (e instanceof Error && e.name !== 'AbortError') {
-          setResults(lexical.sort((a, b) => b.score - a.score));
+          const lexicalSorted = lexical.sort((a, b) => b.score - a.score);
+          setResults(lexicalSorted);
           setError('Ricerca semantica temporaneamente non disponibile: mostrati i risultati testuali.');
+          void generateSummary(trimmed, lexicalSorted);
         }
       } finally {
         setLoading(false);
       }
     },
-    [archive.model, archive.dim, filteredRecords, lexicalSearch, saveRecent]
+    [archive.model, archive.dim, filteredRecords, lexicalSearch, saveRecent, generateSummary]
   );
 
   const handleSearch = () => performSearch(query);
@@ -254,6 +363,10 @@ export const SearchTab = ({
               onChange={(e) => {
                 const val = e.target.value;
                 setQuery(val);
+                summaryAbortController.current?.abort();
+                setSummaryData(null);
+                setSummaryError(false);
+                setSummaryLoading(false);
                 if (val.trim().length >= 2) {
                   setError(null);
                   setResults(lexicalSearch(val).sort((a, b) => b.score - a.score));
@@ -268,8 +381,12 @@ export const SearchTab = ({
             {query && (
               <button
                 onClick={() => {
+                  summaryAbortController.current?.abort();
                   setQuery('');
                   setResults(null);
+                  setSummaryData(null);
+                  setSummaryError(false);
+                  setSummaryLoading(false);
                   searchRef.current?.focus();
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted/50 hover:text-text-primary px-1.5 py-0.5 text-sm font-bold"
@@ -360,49 +477,269 @@ export const SearchTab = ({
 
       {results === null && !loading && <SuggestionsBox archive={archive} onOpenRec={onOpenRec} updateArchive={updateArchive} t={t} />}
 
-      {displayedResults && !loading && (
+      {displayedResults && displayedResults.length > 0 && !loading && (
         <div className="space-y-4">
-          {displayedResults.map((res) => {
-            const rec = archive.records.find((r) => r.id === res.id);
-            if (!rec) return null;
-            const header = buildHeader(rec);
-            const snippet = res.chunkText.startsWith(`${header}: `) ? res.chunkText.substring(header.length + 2) : res.chunkText;
-            const rel = getRelevanceText(res.score);
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex bg-bg-alt p-1 rounded-xl border border-border-primary">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('summary');
+                  if (!summaryData && !summaryLoading && !summaryError && results && results.length > 0) {
+                    void generateSummary(query, results);
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  viewMode === 'summary'
+                    ? 'bg-card-bg text-accent shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <BookOpen size={15} />
+                Riassunto
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-card-bg text-accent shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <List size={15} />
+                Elenco risultati ({results?.length || 0})
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'summary' && summaryLoading && (
+            <div className="p-6 md:p-8 bg-card-bg rounded-2xl border border-border-primary shadow-sm animate-pulse space-y-4">
+              <div className="h-7 bg-bg-alt rounded w-2/5" />
+              <div className="h-4 bg-bg-alt/60 rounded w-1/3" />
+              <div className="h-5 bg-bg-alt rounded w-1/4 mt-6" />
+              <div className="h-4 bg-bg-alt/50 rounded w-full" />
+              <div className="h-4 bg-bg-alt/50 rounded w-11/12" />
+              <div className="h-4 bg-bg-alt/50 rounded w-4/5" />
+            </div>
+          )}
+
+          {viewMode === 'summary' && !summaryLoading && summaryData && !summaryError && (() => {
+            const sourceMap = new Map(summaryData.sources.map((s) => [s.n, s]));
+
+            const renderInlineText = (text: string): React.ReactNode[] => {
+              const tokens = text.split(/(\*\*[^*]+\*\*|\[\d+(?:\s*,\s*\d+)*\])/g);
+              return tokens.map((tok, idx) => {
+                if (tok.startsWith('**') && tok.endsWith('**') && tok.length > 4) {
+                  return <strong key={idx} className="font-semibold">{renderInlineText(tok.slice(2, -2))}</strong>;
+                }
+                const citeMatch = tok.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/);
+                if (citeMatch) {
+                  const nums = citeMatch[1].split(',').map((n) => parseInt(n.trim(), 10));
+                  return (
+                    <span key={idx} className="inline-flex items-baseline">
+                      {nums.map((num, nIdx) => {
+                        const src = sourceMap.get(num);
+                        if (!src) {
+                          return <span key={nIdx} className="text-text-muted text-xs">[{num}]</span>;
+                        }
+                        return (
+                          <button
+                            key={nIdx}
+                            type="button"
+                            onClick={() => onOpenRec(src.id)}
+                            title={`Apri scheda: ${src.titolo}`}
+                            className="inline-flex items-center align-super text-[11px] font-bold text-accent hover:underline mx-0.5 cursor-pointer"
+                          >
+                            [{num}]
+                          </button>
+                        );
+                      })}
+                    </span>
+                  );
+                }
+                return <React.Fragment key={idx}>{tok}</React.Fragment>;
+              });
+            };
+
+            const lines = summaryData.markdown.replace(/\r\n/g, '\n').split('\n');
+            const blocks: React.ReactNode[] = [];
+            let paragraphLines: string[] = [];
+            let listItems: { ordered: boolean; text: string }[] = [];
+
+            const flushParagraph = () => {
+              if (paragraphLines.length === 0) return;
+              const text = paragraphLines.join(' ').trim();
+              if (text) {
+                blocks.push(
+                  <p key={`p-${blocks.length}`} className="text-text-primary leading-relaxed mb-3.5 text-base">
+                    {renderInlineText(text)}
+                  </p>
+                );
+              }
+              paragraphLines = [];
+            };
+
+            const flushList = () => {
+              if (listItems.length === 0) return;
+              const isOrdered = listItems[0].ordered;
+              const Tag = isOrdered ? 'ol' : 'ul';
+              blocks.push(
+                <Tag
+                  key={`list-${blocks.length}`}
+                  className={`${isOrdered ? 'list-decimal' : 'list-disc'} pl-5 space-y-1.5 mb-4 text-text-primary leading-relaxed text-base`}
+                >
+                  {listItems.map((item, i) => (
+                    <li key={i}>{renderInlineText(item.text)}</li>
+                  ))}
+                </Tag>
+              );
+              listItems = [];
+            };
+
+            for (const rawLine of lines) {
+              const line = rawLine.trim();
+              if (!line) {
+                flushParagraph();
+                flushList();
+                continue;
+              }
+              if (line.startsWith('### ')) {
+                flushParagraph();
+                flushList();
+                blocks.push(
+                  <h4 key={`h4-${blocks.length}`} className="font-serif text-lg font-bold text-text-primary mt-5 mb-2">
+                    {renderInlineText(line.slice(4))}
+                  </h4>
+                );
+                continue;
+              }
+              if (line.startsWith('## ')) {
+                flushParagraph();
+                flushList();
+                blocks.push(
+                  <h3
+                    key={`h3-${blocks.length}`}
+                    className="font-serif text-xl font-bold text-text-primary border-b border-border-primary pb-1.5 mt-6 mb-3"
+                  >
+                    {renderInlineText(line.slice(3))}
+                  </h3>
+                );
+                continue;
+              }
+              if (line.startsWith('# ')) {
+                flushParagraph();
+                flushList();
+                blocks.push(
+                  <h2
+                    key={`h2-${blocks.length}`}
+                    className="font-serif text-2xl font-bold text-text-primary border-b border-border-primary pb-2 mt-4 mb-3"
+                  >
+                    {renderInlineText(line.slice(2))}
+                  </h2>
+                );
+                continue;
+              }
+              const ulMatch = line.match(/^[-*]\s+(.+)$/);
+              if (ulMatch) {
+                flushParagraph();
+                if (listItems.length > 0 && listItems[0].ordered) flushList();
+                listItems.push({ ordered: false, text: ulMatch[1] });
+                continue;
+              }
+              const olMatch = line.match(/^\d+\.\s+(.+)$/);
+              if (olMatch) {
+                flushParagraph();
+                if (listItems.length > 0 && !listItems[0].ordered) flushList();
+                listItems.push({ ordered: true, text: olMatch[1] });
+                continue;
+              }
+              flushList();
+              paragraphLines.push(line);
+            }
+            flushParagraph();
+            flushList();
 
             return (
-              <div
-                key={res.id}
-                onClick={() => onOpenRec(res.id)}
-                className="p-5 bg-card-bg rounded-2xl border border-border-primary shadow-sm cursor-pointer hover:border-accent transition-all space-y-2.5"
-              >
-                <div className="flex flex-wrap justify-between items-baseline gap-3">
-                  <h4 className="font-serif font-bold text-lg text-text-primary">{rec.titolo}</h4>
-                  <div className="flex items-center gap-2 text-xs text-text-muted tabular-nums shrink-0">
-                    <span className={`font-semibold ${rel.cls}`}>{rel.label}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{templateNameMap.get(rec.tipo) || rec.tipo}</span>
-                  </div>
-                </div>
-                {rec.tags.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-                    {rec.tags.map((tg, idx) => (
-                      <React.Fragment key={tg}>
-                        {idx > 0 && <span aria-hidden="true">·</span>}
-                        <span>#{tg}</span>
-                      </React.Fragment>
+              <article className="p-6 md:p-8 bg-card-bg rounded-2xl border border-border-primary shadow-sm">
+                <header className="border-b border-border-primary pb-4 mb-5">
+                  <h2 className="font-serif text-2xl md:text-3xl font-bold text-text-primary tracking-tight">
+                    {query.trim()}
+                  </h2>
+                  <p className="text-xs text-text-muted mt-1">
+                    Sintesi enciclopedica generata esclusivamente da {summaryData.sources.length}{' '}
+                    {summaryData.sources.length === 1 ? 'scheda' : 'schede'} dell&apos;archivio
+                  </p>
+                </header>
+
+                <div>{blocks}</div>
+
+                <footer className="border-t border-border-primary pt-4 mt-6">
+                  <h4 className="font-serif font-bold text-base text-text-primary mb-2.5">Fonti</h4>
+                  <ol className="space-y-1.5 text-sm">
+                    {summaryData.sources.map((src) => (
+                      <li key={`${src.n}-${src.id}`} className="flex items-baseline gap-2">
+                        <span className="font-mono text-xs font-bold text-accent shrink-0">[{src.n}]</span>
+                        <button
+                          type="button"
+                          onClick={() => onOpenRec(src.id)}
+                          className="text-left text-text-primary hover:text-accent hover:underline font-medium cursor-pointer"
+                        >
+                          {src.titolo}
+                        </button>
+                      </li>
                     ))}
-                  </div>
-                )}
-                {snippet && snippet.trim() !== rec.titolo.trim() && (
-                  <p className="text-text-muted line-clamp-3 text-base leading-relaxed">{snippet}</p>
-                )}
-              </div>
+                  </ol>
+                </footer>
+              </article>
             );
-          })}
-          {results && results.length > topN && (
-            <Button onClick={() => setTopN(topN + 10)} variant="secondary" className="w-full py-3 text-base font-semibold">
-              {t('showMore10')}
-            </Button>
+          })()}
+
+          {(viewMode === 'list' || summaryError || (!summaryLoading && !summaryData)) && (
+            <div className="space-y-4">
+              {displayedResults.map((res) => {
+                const rec = archive.records.find((r) => r.id === res.id);
+                if (!rec) return null;
+                const header = buildHeader(rec);
+                const snippet = res.chunkText.startsWith(`${header}: `) ? res.chunkText.substring(header.length + 2) : res.chunkText;
+                const rel = getRelevanceText(res.score);
+
+                return (
+                  <div
+                    key={res.id}
+                    onClick={() => onOpenRec(res.id)}
+                    className="p-5 bg-card-bg rounded-2xl border border-border-primary shadow-sm cursor-pointer hover:border-accent transition-all space-y-2.5"
+                  >
+                    <div className="flex flex-wrap justify-between items-baseline gap-3">
+                      <h4 className="font-serif font-bold text-lg text-text-primary">{rec.titolo}</h4>
+                      <div className="flex items-center gap-2 text-xs text-text-muted tabular-nums shrink-0">
+                        <span className={`font-semibold ${rel.cls}`}>{rel.label}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{templateNameMap.get(rec.tipo) || rec.tipo}</span>
+                      </div>
+                    </div>
+                    {rec.tags.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+                        {rec.tags.map((tg, idx) => (
+                          <React.Fragment key={tg}>
+                            {idx > 0 && <span aria-hidden="true">·</span>}
+                            <span>#{tg}</span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+                    {snippet && snippet.trim() !== rec.titolo.trim() && (
+                      <p className="text-text-muted line-clamp-3 text-base leading-relaxed">{snippet}</p>
+                    )}
+                  </div>
+                );
+              })}
+              {results && results.length > topN && (
+                <Button onClick={() => setTopN(topN + 10)} variant="secondary" className="w-full py-3 text-base font-semibold">
+                  {t('showMore10')}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}

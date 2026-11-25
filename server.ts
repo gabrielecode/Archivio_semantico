@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { embedHandler, healthHandler } from './api/_lib/embed.js';
+import { summarizeHandler } from './api/_lib/summarize.js';
 import { ttsHandler } from './api/_lib/tts.js';
 
 dotenv.config({ path: ['.env.local', '.env'] });
@@ -15,6 +16,7 @@ app.use(express.json({ limit: '256kb' }));
 app.get('/api/health', healthHandler);
 app.get('/api/tts', ttsHandler);
 app.post('/api/embed', embedHandler);
+app.post('/api/summarize', summarizeHandler);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(err);

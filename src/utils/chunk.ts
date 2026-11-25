@@ -14,37 +14,106 @@ export function calculateEmbHash(rec: Rec): string {
     return djb2(source);
 }
 
+function isMediaOrLinkKey(key: string): boolean {
+    const lowerKey = key.toLowerCase();
+    return (
+        lowerKey.includes('immagine') ||
+        lowerKey.includes('image') ||
+        lowerKey.includes('video') ||
+        lowerKey.includes('link')
+    );
+}
+
 export function buildHeader(rec: Rec): string {
     const fieldsParts: string[] = [];
     
-    for (const [key, value] of Object.entries(rec.campi)) {
-        if (!value) continue;
+    for (const [key, value] of Object.entries(rec.campi || {})) {
+        if (!value || isMediaOrLinkKey(key)) continue;
         
-        if (Array.isArray(value)) {
-            if (value.length > 0) {
-                fieldsParts.push(`${key}: ${value.filter(v => !!v).join('; ')}`);
-            }
-        } else {
-            fieldsParts.push(`${key}: ${value}`);
-        }
+        const raw = Array.isArray(value)
+            ? value.filter(v => !!v).join('; ')
+            : String(value);
+        const trimmed = raw.trim();
+        if (!trimmed) continue;
+
+        fieldsParts.push(`${key}: ${trimmed.substring(0, 300)}`);
     }
 
     const fieldsStr = fieldsParts.length > 0 ? ` | ${fieldsParts.join(' | ')}` : '';
-    const tagsPart = rec.tags.length > 0 ? ` | tag: ${rec.tags.join(', ')}` : '';
+    const tagsPart = (rec.tags || []).length > 0 ? ` | tag: ${rec.tags.join(', ')}` : '';
     const contentPart = rec.contenuto ? ` | contenuto: ${rec.contenuto.replace(/\n/g, ' ')}` : '';
     
     return `${rec.titolo} (${rec.tipo})${tagsPart}${fieldsStr}${contentPart}`.substring(0, 1200);
 }
 
 export function splitChunks(rec: Rec): { testo: string; embedding: number[] }[] {
-    const content = rec.contenuto.replace(/\r\n/g, '\n');
+    const content = (rec.contenuto || '').replace(/\r\n/g, '\n');
     const header = buildHeader(rec);
 
     const paragraphs = content.split('\n\n').map(p => p.trim()).filter(p => p !== '');
     const chunks: { testo: string; embedding: number[] }[] = [];
     
     if (paragraphs.length === 0) {
-        chunks.push({ testo: header, embedding: [] });
+        const prefix = `${rec.titolo} (${rec.tipo})`;
+        const entries: string[] = [];
+        if ((rec.tags || []).length > 0) {
+            entries.push(`tag: ${rec.tags.join(', ')}`);
+        }
+        for (const [key, value] of Object.entries(rec.campi || {})) {
+            if (!value || isMediaOrLinkKey(key)) continue;
+            const raw = Array.isArray(value)
+                ? value.filter(v => !!v).join('; ')
+                : String(value);
+            const trimmed = raw.trim();
+            if (trimmed) {
+                entries.push(`${key}: ${trimmed}`);
+            }
+        }
+
+        if (entries.length === 0) {
+            chunks.push({ testo: prefix.substring(0, 1500), embedding: [] });
+            return chunks;
+        }
+
+        const MAX_CHUNK_LEN = 1500;
+        const maxBodyLen = Math.max(200, MAX_CHUNK_LEN - prefix.length - 3);
+        let currentBody = '';
+
+        const flushBody = () => {
+            if (!currentBody) return;
+            chunks.push({
+                testo: `${prefix} | ${currentBody}`.substring(0, MAX_CHUNK_LEN),
+                embedding: [],
+            });
+            currentBody = '';
+        };
+
+        for (const entry of entries) {
+            if (entry.length > maxBodyLen) {
+                flushBody();
+                let remaining = entry;
+                while (remaining.length > maxBodyLen) {
+                    let cut = remaining.lastIndexOf(' ', maxBodyLen);
+                    if (cut < Math.floor(maxBodyLen * 0.5)) cut = maxBodyLen;
+                    chunks.push({
+                        testo: `${prefix} | ${remaining.substring(0, cut).trimEnd()}`.substring(0, MAX_CHUNK_LEN),
+                        embedding: [],
+                    });
+                    remaining = remaining.substring(cut).trimStart();
+                }
+                if (remaining) {
+                    currentBody = remaining;
+                }
+            } else if (!currentBody) {
+                currentBody = entry;
+            } else if (currentBody.length + 3 + entry.length <= maxBodyLen) {
+                currentBody += ` | ${entry}`;
+            } else {
+                flushBody();
+                currentBody = entry;
+            }
+        }
+        flushBody();
         return chunks;
     }
 

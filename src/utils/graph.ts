@@ -1,5 +1,5 @@
 import { Archive, GraphData, GraphLink, GraphLinkKind, GraphNode, GraphNodeType, Rec } from '../types';
-import { extractWikiLinks, getRecordText, resolveRecord } from './parser';
+import { extractWikiLinks, getRecordText, normTitle, resolveRecord } from './parser';
 
 export const NODE_TYPE_COLORS: Record<GraphNodeType, string> = {
   acupoint: '#059669',  // emerald-600
@@ -227,18 +227,35 @@ export function buildMtcGraph(archive: Archive, options: BuildGraphOptions): Gra
 
   // 2. Metadata & shared tag links
   if (showMetadata) {
+    const extractAliasTerms = (val: unknown): string[] =>
+      extractFieldTexts(val)
+        .flatMap((s) => s.split(/[;,\r\n]+/))
+        .map((s) => normTitle(s))
+        .filter((t) => t.length >= 4);
+
     const normalizedTargets = archive.records
-      .map((r) => ({ id: r.id, normTitle: normalizeGraphText(r.titolo || '') }))
-      .filter((item) => item.normTitle.length >= 4);
+      .map((r) => {
+        const terms = Array.from(
+          new Set(
+            [
+              normTitle(r.titolo || ''),
+              ...extractAliasTerms(r.campi?.nomi_secondari),
+              ...extractAliasTerms(r.campi?.numero),
+              ...extractAliasTerms(r.campi?.ideogramma),
+              ...extractAliasTerms(r.campi?.ideogrammi),
+            ].filter((t) => t.length >= 4)
+          )
+        );
+        return { id: r.id, terms };
+      })
+      .filter((item) => item.terms.length > 0);
 
     archive.records.forEach((sourceRec) => {
-      const fieldTexts = extractFieldTexts(Object.values(sourceRec.campi || {}))
-        .map(normalizeGraphText)
-        .filter(Boolean);
-      if (fieldTexts.length === 0) return;
+      const sourceText = normTitle(getRecordText(sourceRec));
+      if (!sourceText) return;
 
-      normalizedTargets.forEach(({ id: targetId, normTitle }) => {
-        if (targetId !== sourceRec.id && fieldTexts.some((txt) => txt.includes(normTitle))) {
+      normalizedTargets.forEach(({ id: targetId, terms }) => {
+        if (targetId !== sourceRec.id && terms.some((term) => sourceText.includes(term))) {
           upsertLink(sourceRec.id, targetId, 'metadata', 'correlato_a', { dashed: true, weight: 0.45 });
         }
       });
