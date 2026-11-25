@@ -1,5 +1,5 @@
 import { Archive, GraphData, GraphLink, GraphLinkKind, GraphNode, GraphNodeType, Rec } from '../types';
-import { extractWikiLinks, findRecordByTitle } from './parser';
+import { extractWikiLinks, getRecordText, resolveRecord } from './parser';
 
 export const NODE_TYPE_COLORS: Record<GraphNodeType, string> = {
   acupoint: '#059669',  // emerald-600
@@ -191,12 +191,12 @@ export function buildMtcGraph(archive: Archive, options: BuildGraphOptions): Gra
     return 'correlato_a';
   };
 
-  // 1. Explicit wiki-links & outlinks
+  // 1. Explicit wiki-links
   if (showExplicit) {
     archive.records.forEach((sourceRec) => {
-      const wikiLinks = extractWikiLinks(sourceRec.contenuto);
+      const wikiLinks = extractWikiLinks(getRecordText(sourceRec));
       wikiLinks.forEach((wl) => {
-        const targetRec = findRecordByTitle(archive, wl.targetTitle);
+        const targetRec = resolveRecord(archive, wl.targetTitle);
         if (targetRec && targetRec.id !== sourceRec.id) {
           upsertLink(
             sourceRec.id,
@@ -215,28 +215,6 @@ export function buildMtcGraph(archive: Archive, options: BuildGraphOptions): Gra
             }
             ghostNodesMap.get(ghostKey)!.count++;
             upsertLink(sourceRec.id, ghostId, 'explicit', wl.tipoRelazione || 'correlato_a', {
-              isGhost: true,
-              dashed: true,
-              weight: 0.5,
-            });
-          }
-        }
-      });
-
-      (sourceRec.outlinks || []).forEach((targetTitle) => {
-        const targetRec = findRecordByTitle(archive, targetTitle);
-        if (targetRec && targetRec.id !== sourceRec.id) {
-          upsertLink(sourceRec.id, targetRec.id, 'explicit', inferRelation(sourceRec, targetRec), { weight: 1 });
-        } else if (!targetRec) {
-          const cleanTitle = targetTitle.trim();
-          if (cleanTitle && cleanTitle.toLowerCase() !== sourceRec.titolo.trim().toLowerCase()) {
-            const ghostKey = cleanTitle.toLowerCase();
-            const ghostId = `ghost-${ghostKey}`;
-            if (!ghostNodesMap.has(ghostKey)) {
-              ghostNodesMap.set(ghostKey, { title: cleanTitle, count: 0 });
-            }
-            ghostNodesMap.get(ghostKey)!.count++;
-            upsertLink(sourceRec.id, ghostId, 'explicit', 'correlato_a', {
               isGhost: true,
               dashed: true,
               weight: 0.5,

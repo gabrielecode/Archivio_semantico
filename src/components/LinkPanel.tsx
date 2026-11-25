@@ -1,6 +1,6 @@
 import React, {useState, useMemo} from 'react';
 import {Archive, Rec} from '../types';
-import {getBacklinks, getDistance2Nodes, shortestPath, findRecordByTitle} from '../utils/parser';
+import {getBacklinks, getDistance2Nodes, shortestPath, extractWikiLinks, getRecordText, resolveRecord, normTitle} from '../utils/parser';
 import {Link, ArrowUpRight, ArrowDownLeft, Network, Route, Plus} from 'lucide-react';
 import {Button} from './ui';
 
@@ -20,21 +20,39 @@ export function LinkPanel({
     const [targetPathId, setTargetPathId] = useState<string>('');
     const [showPathModal, setShowPathModal] = useState(false);
 
-    const outlinks = currentRecord.outlinks || [];
+    const { outlinksRecords, unresolvedOutlinks } = useMemo(() => {
+        const links = extractWikiLinks(getRecordText(currentRecord));
+        const seenRecordIds = new Set<string>();
+        const seenUnresolved = new Set<string>();
+        const resolved: Rec[] = [];
+        const unresolved: string[] = [];
+        const currentNorm = normTitle(currentRecord.titolo);
 
-    const outlinksRecords = useMemo(() => {
-        return outlinks
-            .map(title => findRecordByTitle(archive, title))
-            .filter(Boolean) as Rec[];
-    }, [archive, outlinks]);
+        for (const link of links) {
+            const targetRec = resolveRecord(archive, link.targetTitle);
+            if (targetRec) {
+                if (targetRec.id !== currentRecord.id && !seenRecordIds.has(targetRec.id)) {
+                    seenRecordIds.add(targetRec.id);
+                    resolved.push(targetRec);
+                }
+            } else {
+                const cleanTitle = link.targetTitle.trim();
+                const norm = normTitle(cleanTitle);
+                if (cleanTitle && norm !== currentNorm && !seenUnresolved.has(norm)) {
+                    seenUnresolved.add(norm);
+                    unresolved.push(cleanTitle);
+                }
+            }
+        }
 
-    const unresolvedOutlinks = useMemo(() => {
-        return outlinks.filter(title => !findRecordByTitle(archive, title));
-    }, [archive, outlinks]);
+        return { outlinksRecords: resolved, unresolvedOutlinks: unresolved };
+    }, [archive, currentRecord]);
+
+    const totalOutlinks = outlinksRecords.length + unresolvedOutlinks.length;
 
     const backlinks = useMemo(() => {
         return getBacklinks(archive, currentRecord.titolo);
-    }, [archive, currentRecord.titolo]);
+    }, [archive, currentRecord]);
 
     const distance2 = useMemo(() => {
         return getDistance2Nodes(archive, currentRecord.id);
@@ -57,9 +75,9 @@ export function LinkPanel({
                 <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-stone-700 flex items-center gap-1.5">
                         <ArrowUpRight size={16} className="text-amber-600" />
-                        Outlink ({outlinks.length})
+                        Outlink ({totalOutlinks})
                     </h4>
-                    {outlinks.length === 0 ? (
+                    {totalOutlinks === 0 ? (
                         <p className="text-sm text-stone-400 italic">Nessun collegamento in uscita (usa [[Titolo]])</p>
                     ) : (
                         <div className="space-y-2">

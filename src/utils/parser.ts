@@ -119,63 +119,144 @@ export function updateRecordOutlinks(record: Rec): Rec {
     };
 }
 
+export function normTitle(s: string): string {
+    return (s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+}
+
+export function getRecordText(rec: Rec): string {
+    const parts: string[] = [];
+    if (typeof rec.contenuto === 'string' && rec.contenuto.trim()) {
+        parts.push(rec.contenuto.trim());
+    }
+    if (rec.campi && typeof rec.campi === 'object') {
+        for (const [key, val] of Object.entries(rec.campi)) {
+            const lowerKey = key.toLowerCase();
+            if (
+                lowerKey.includes('immagine') ||
+                lowerKey.includes('image') ||
+                lowerKey.includes('video') ||
+                lowerKey.includes('link')
+            ) {
+                continue;
+            }
+            if (typeof val === 'string') {
+                if (val.trim()) parts.push(val.trim());
+            } else if (Array.isArray(val)) {
+                for (const item of val) {
+                    if (typeof item === 'string' && item.trim()) {
+                        parts.push(item.trim());
+                    }
+                }
+            }
+        }
+    }
+    return parts.join('\n');
+}
+
+function extractResolveCandidates(val: unknown): string[] {
+    if (val === undefined || val === null) return [];
+    if (Array.isArray(val)) {
+        return val.flatMap(item => extractResolveCandidates(item));
+    }
+    const str = String(val);
+    if (!str.trim()) return [];
+    return str
+        .split(/[;,\r\n]+/)
+        .map(part => normTitle(part))
+        .filter(Boolean);
+}
+
+export function resolveRecord(archive: Archive, label: string): Rec | undefined {
+    const target = normTitle(label);
+    if (!target || !archive?.records?.length) return undefined;
+
+    const byTitle = archive.records.find(r => normTitle(r.titolo) === target);
+    if (byTitle) return byTitle;
+
+    return archive.records.find(r => {
+        const campi = r.campi || {};
+        const candidates = [
+            ...extractResolveCandidates(campi.nomi_secondari),
+            ...extractResolveCandidates(campi.numero),
+            ...extractResolveCandidates(campi.ideogramma),
+            ...extractResolveCandidates(campi.ideogrammi),
+        ];
+        return candidates.includes(target);
+    });
+}
+
 export function findRecordByTitle(archive: Archive, title: string): Rec | undefined {
-    const clean = title.trim().toLowerCase();
-    return archive.records.find(r => r.titolo.trim().toLowerCase() === clean);
+    return resolveRecord(archive, title);
 }
 
 export function getBacklinks(archive: Archive, targetTitle: string): Rec[] {
-    const clean = targetTitle.trim().toLowerCase();
-    return archive.records.filter(r => 
-        r.outlinks.some(o => o.trim().toLowerCase() === clean) ||
-        r.contenuto.toLowerCase().includes(`[[${clean}]]`)
-    );
+    const target = resolveRecord(archive, targetTitle);
+    if (!target) return [];
+    return archive.records.filter(r => {
+        if (r.id === target.id) return false;
+        const links = extractWikiLinks(getRecordText(r));
+        return links.some(l => resolveRecord(archive, l.targetTitle)?.id === target.id);
+    });
 }
 
 export function getDistance2Nodes(archive: Archive, currentId: string): { record: Rec; path: string[] }[] {
     const current = archive.records.find(r => r.id === currentId);
     if (!current) return [];
 
-    const titleToRec = new Map<string, Rec>();
-    archive.records.forEach(r => titleToRec.set(r.titolo.trim().toLowerCase(), r));
-
-    // Build adjacency list (title -> set of neighbor titles)
+    const idToRec = new Map<string, Rec>();
     const adj = new Map<string, Set<string>>();
     archive.records.forEach(r => {
-        const u = r.titolo.trim().toLowerCase();
-        if (!adj.has(u)) adj.set(u, new Set());
-        r.outlinks.forEach(out => {
-            const v = out.trim().toLowerCase();
-            adj.get(u)!.add(v);
-            if (!adj.has(v)) adj.set(v, new Set());
-            adj.get(v)!.add(u); // undirected for connection exploration / distance 2
+        idToRec.set(r.id, r);
+        adj.set(r.id, new Set());
+    });
+
+    // Build undirected adjacency list from dynamic wiki-links resolved via resolveRecord
+    archive.records.forEach(r => {
+        const links = extractWikiLinks(getRecordText(r));
+        links.forEach(l => {
+            const targetRec = resolveRecord(archive, l.targetTitle);
+            if (targetRec && targetRec.id !== r.id) {
+                adj.get(r.id)!.add(targetRec.id);
+                adj.get(targetRec.id)!.add(r.id); // undirected for connection exploration / distance 2
+            }
         });
     });
 
-    const startTitle = current.titolo.trim().toLowerCase();
-    const visited = new Map<string, number>(); // title -> distance
-    const queue: { title: string; dist: number }[] = [{ title: startTitle, dist: 0 }];
-    visited.set(startTitle, 0);
+    const visited = new Map<string, number>(); // recordId -> distance
+    const parent = new Map<string, string>(); // recordId -> parent recordId
+    const queue: { id: string; dist: number }[] = [{ id: currentId, dist: 0 }];
+    visited.set(currentId, 0);
 
     while (queue.length > 0) {
-        const { title, dist } = queue.shift()!;
+        const { id, dist } = queue.shift()!;
         if (dist >= 2) continue;
 
-        const neighbors = adj.get(title) || new Set();
-        for (const neighbor of neighbors) {
-            if (!visited.has(neighbor)) {
-                visited.set(neighbor, dist + 1);
-                queue.push({ title: neighbor, dist: dist + 1 });
+        const neighbors = adj.get(id) || new Set();
+        for (const neighborId of neighbors) {
+            if (!visited.has(neighborId)) {
+                visited.set(neighborId, dist + 1);
+                parent.set(neighborId, id);
+                queue.push({ id: neighborId, dist: dist + 1 });
             }
         }
     }
 
     const results: { record: Rec; path: string[] }[] = [];
-    visited.forEach((dist, title) => {
+    visited.forEach((dist, id) => {
         if (dist === 2) {
-            const rec = titleToRec.get(title);
-            if (rec && rec.id !== currentId) {
-                results.push({ record: rec, path: [current.titolo, title] });
+            const rec = idToRec.get(id);
+            const interId = parent.get(id);
+            const interRec = interId ? idToRec.get(interId) : undefined;
+            if (rec && interRec && rec.id !== currentId) {
+                results.push({
+                    record: rec,
+                    path: [current.titolo, interRec.titolo, rec.titolo]
+                });
             }
         }
     });
@@ -190,17 +271,18 @@ export function shortestPath(archive: Archive, startId: string, endId: string): 
     }
 
     const titleToRec = new Map<string, Rec>();
-    archive.records.forEach(r => titleToRec.set(r.id, r));
-
     const adj = new Map<string, Set<string>>();
     archive.records.forEach(r => {
+        titleToRec.set(r.id, r);
+        adj.set(r.id, new Set());
+    });
+
+    archive.records.forEach(r => {
         const u = r.id;
-        if (!adj.has(u)) adj.set(u, new Set());
-        r.outlinks.forEach(out => {
-            const targetRec = findRecordByTitle(archive, out);
-            if (targetRec) {
+        extractWikiLinks(getRecordText(r)).forEach(link => {
+            const targetRec = resolveRecord(archive, link.targetTitle);
+            if (targetRec && targetRec.id !== u) {
                 adj.get(u)!.add(targetRec.id);
-                if (!adj.has(targetRec.id)) adj.set(targetRec.id, new Set());
                 adj.get(targetRec.id)!.add(u);
             }
         });
