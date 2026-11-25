@@ -11,6 +11,7 @@ import { DynamicForm } from './DynamicForm';
 import { CardPreview } from './CardPreview';
 import { PronunciationButton } from './PronunciationButton';
 import { DataTableView } from './DataTableView';
+import { TagManagerPanel } from './TagManagerPanel';
 import templatesData from '../templates.json';
 
 const templates = templatesData as Template[];
@@ -122,7 +123,7 @@ export function DataTab({
     if (!draft || !draft.titolo.trim()) return;
     const now = new Date().toISOString();
     const withOutlinks = updateRecordOutlinks(draft);
-    const updated = { ...withOutlinks, modificato: now };
+    const updated = { ...withOutlinks, tag: withOutlinks.tags, modificato: now };
     if (isNew) {
       setArchive((a) => ({ ...a, records: [...a.records, updated] }));
     } else {
@@ -136,6 +137,27 @@ export function DataTab({
     onToast?.('Scheda salvata');
     window.scrollTo({ top: 0 });
   }, [draft, isNew, setArchive, setDirty, onToast]);
+
+  const updateDraftTags = useCallback(
+    (nextTags: string[]) => {
+      if (!draft) return;
+      const next: Rec = {
+        ...draft,
+        tags: nextTags,
+        tag: nextTags,
+        modificato: new Date().toISOString(),
+      };
+      setDraft(next);
+      if (!isNew) {
+        setArchive((a) => ({
+          ...a,
+          records: a.records.map((r) => (r.id === draft.id ? next : r)),
+        }));
+      }
+      setDirty(true);
+    },
+    [draft, isNew, setArchive, setDirty]
+  );
 
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 
@@ -549,37 +571,45 @@ export function DataTab({
         <div className={`${editing ? 'w-full' : 'grid lg:grid-cols-2 gap-12 items-start'} pt-4`}>
           <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
             {editing ? (
-              <DynamicForm
-                key={draft.id}
-                initialValues={isNew ? {} : draft}
-                templateId={(isNew ? templateId : templates.some((tpl) => tpl.id === draft.tipo) ? draft.tipo : undefined) || undefined}
-                onSave={handleTemplateSave}
-                onAutosave={handleTemplateAutosave}
-                onDirty={setFormDirty}
-                onCancel={() => {
-                  const closeForm = () => {
-                    setFormDirty(false);
-                    setEditing(false);
-                    if (isNew && filteredRecords[0]) {
-                      lastLoadedIdRef.current = null;
-                      setSelectedId(filteredRecords[0].id);
+              <>
+                <DynamicForm
+                  key={draft.id}
+                  initialValues={isNew ? {} : draft}
+                  templateId={(isNew ? templateId : templates.some((tpl) => tpl.id === draft.tipo) ? draft.tipo : undefined) || undefined}
+                  onSave={handleTemplateSave}
+                  onAutosave={handleTemplateAutosave}
+                  onDirty={setFormDirty}
+                  onCancel={() => {
+                    const closeForm = () => {
+                      setFormDirty(false);
+                      setEditing(false);
+                      if (isNew && filteredRecords[0]) {
+                        lastLoadedIdRef.current = null;
+                        setSelectedId(filteredRecords[0].id);
+                      }
+                    };
+                    if (formDirty) {
+                      setConfirmDialog({
+                        title: 'Modifiche non salvate',
+                        message: 'Uscire senza salvare?',
+                        onConfirm: () => {
+                          setConfirmDialog(null);
+                          closeForm();
+                        },
+                        onCancel: () => setConfirmDialog(null),
+                      });
+                    } else {
+                      closeForm();
                     }
-                  };
-                  if (formDirty) {
-                    setConfirmDialog({
-                      title: 'Modifiche non salvate',
-                      message: 'Uscire senza salvare?',
-                      onConfirm: () => {
-                        setConfirmDialog(null);
-                        closeForm();
-                      },
-                      onCancel: () => setConfirmDialog(null),
-                    });
-                  } else {
-                    closeForm();
-                  }
-                }}
-              />
+                  }}
+                />
+                <TagManagerPanel
+                  archive={archive}
+                  record={draft}
+                  onUpdateTags={updateDraftTags}
+                  onToast={onToast}
+                />
+              </>
             ) : (
               <div className="space-y-8">
                 <CardPreview record={draft} />
@@ -629,6 +659,12 @@ export function DataTab({
                   }}
                 />
               </div>
+              <TagManagerPanel
+                archive={archive}
+                record={draft}
+                onUpdateTags={updateDraftTags}
+                onToast={onToast}
+              />
               <LinkPanel
                 archive={archive}
                 currentRecord={draft}
