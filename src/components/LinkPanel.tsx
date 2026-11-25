@@ -9,13 +9,15 @@ interface LinkPanelProps {
     currentRecord: Rec;
     onSelectRecord: (id: string) => void;
     onCreateRecord: (title: string) => void;
+    onUpdateContent?: (content: string) => void;
 }
 
 export function LinkPanel({
     archive,
     currentRecord,
     onSelectRecord,
-    onCreateRecord
+    onCreateRecord,
+    onUpdateContent
 }: LinkPanelProps) {
     const [targetPathId, setTargetPathId] = useState<string>('');
     const [showPathModal, setShowPathModal] = useState(false);
@@ -62,6 +64,63 @@ export function LinkPanel({
         if (!targetPathId) return [];
         return shortestPath(archive, currentRecord.id, targetPathId);
     }, [archive, currentRecord.id, targetPathId]);
+
+    const unlinkedMentions = useMemo(() => {
+        const currentText = normTitle(getRecordText(currentRecord));
+        if (!currentText) return [];
+
+        const linkedIds = new Set(outlinksRecords.map(r => r.id));
+        const extractTerms = (val: unknown): string[] => {
+            if (val === undefined || val === null) return [];
+            if (Array.isArray(val)) return val.flatMap(extractTerms);
+            const str = String(val);
+            if (!str.trim()) return [];
+            return str.split(/[;,\r\n]+/).map(s => s.trim()).filter(Boolean);
+        };
+
+        const matches: { record: Rec; matchedTerm: string }[] = [];
+        for (const rec of archive.records) {
+            if (rec.id === currentRecord.id || linkedIds.has(rec.id)) continue;
+
+            const rawTerms = [
+                rec.titolo,
+                ...extractTerms(rec.campi?.nomi_secondari),
+                ...extractTerms(rec.campi?.numero),
+                ...extractTerms(rec.campi?.ideogramma),
+                ...extractTerms(rec.campi?.ideogrammi),
+            ];
+
+            let matchedTerm: string | null = null;
+            const seenNorms = new Set<string>();
+            for (const raw of rawTerms) {
+                const norm = normTitle(raw);
+                if (norm.length < 3 || seenNorms.has(norm)) continue;
+                seenNorms.add(norm);
+
+                const escaped = norm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const startB = /^[a-z0-9]/.test(norm) ? '(?:^|[^a-z0-9])' : '';
+                const endB = /[a-z0-9]$/.test(norm) ? '(?:$|[^a-z0-9])' : '';
+                const re = new RegExp(`${startB}${escaped}${endB}`);
+                if (re.test(currentText)) {
+                    matchedTerm = raw.trim();
+                    break;
+                }
+            }
+
+            if (matchedTerm) {
+                matches.push({ record: rec, matchedTerm });
+                if (matches.length >= 8) break;
+            }
+        }
+        return matches;
+    }, [archive.records, currentRecord, outlinksRecords]);
+
+    const handleLinkMention = (title: string) => {
+        if (!onUpdateContent) return;
+        const base = (currentRecord.contenuto || '').trimEnd();
+        const sep = !base ? '' : base.split('\n').pop()?.startsWith('Vedi anche:') ? '\n' : '\n\n';
+        onUpdateContent(`${base}${sep}Vedi anche: [[${title}]]`);
+    };
 
     return (
         <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-sm space-y-6">
@@ -164,6 +223,56 @@ export function LinkPanel({
                                 {record.titolo}
                                 <span className="ml-1.5 text-[10px] text-stone-500">({record.categoria || record.tipo})</span>
                             </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Unlinked Mentions */}
+            <div className="border-t border-stone-100 pt-4 space-y-3">
+                <div>
+                    <h4 className="text-sm font-semibold text-stone-800">
+                        Menzioni non collegate ({unlinkedMentions.length})
+                    </h4>
+                    <p className="text-xs text-stone-500">
+                        Schede citate nel testo della scheda corrente ma non ancora collegate
+                    </p>
+                </div>
+
+                {unlinkedMentions.length === 0 ? (
+                    <p className="text-xs text-stone-400 italic">Nessuna menzione non collegata trovata</p>
+                ) : (
+                    <div className="space-y-2">
+                        {unlinkedMentions.map(({ record, matchedTerm }) => (
+                            <div
+                                key={record.id}
+                                className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-3"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectRecord(record.id)}
+                                    className="text-left min-w-0 flex-1 group cursor-pointer"
+                                >
+                                    <div className="font-medium text-stone-900 group-hover:text-amber-800 text-sm truncate">
+                                        {record.titolo}
+                                    </div>
+                                    <div className="text-xs text-stone-500 truncate">
+                                        {record.categoria || record.tipo}
+                                        {normTitle(matchedTerm) !== normTitle(record.titolo) && (
+                                            <span className="ml-1.5 text-amber-700">· citata come &ldquo;{matchedTerm}&rdquo;</span>
+                                        )}
+                                    </div>
+                                </button>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleLinkMention(record.titolo)}
+                                    disabled={!onUpdateContent}
+                                    className="shrink-0"
+                                >
+                                    <Plus size={14} /> Collega
+                                </Button>
+                            </div>
                         ))}
                     </div>
                 )}

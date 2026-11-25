@@ -682,6 +682,15 @@ export function DataTab({
                   setSelectedId(id);
                 }}
                 onCreateRecord={(title) => handleCreateRecordFromWiki(title)}
+                onUpdateContent={(val) => {
+                  const next = { ...draft, contenuto: val };
+                  setDraft(next);
+                  setArchive((a) => ({
+                    ...a,
+                    records: a.records.map((r) => (r.id === draft.id ? next : r)),
+                  }));
+                  setDirty(true);
+                }}
               />
             </div>
           )}
